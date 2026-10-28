@@ -1,0 +1,81 @@
+name: independent-talkocrm
+x-api: &api
+  build:
+    context: .
+    dockerfile: infra/api.Dockerfile
+  environment: &api-env
+    ENVIRONMENT: ${ENVIRONMENT:-development}
+    DATABASE_URL: postgresql+psycopg://crm:${DB_PASSWORD:?Run scripts/configure.py}@db:5432/talkocrm
+    SECRET_KEY: ${SECRET_KEY:?Run scripts/configure.py}
+    ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Run scripts/configure.py}
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+    STORAGE_PATH: /storage
+    BRAND_NAME: ${BRAND_NAME:-Aven}
+    CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+    CONTACT_PHONE: ${CONTACT_PHONE:-}
+    BUSINESS_TEXT: ${BUSINESS_TEXT:-CRM software shaped around the way you work.}
+  volumes: [files:/storage]
+  restart: unless-stopped
+  depends_on:
+    db: {condition: service_healthy}
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: talkocrm
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run scripts/configure.py}
+      TZ: UTC
+    volumes: [database:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U crm -d talkocrm]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    <<: *api
+    restart: "no"
+    command: [alembic, upgrade, head]
+  api:
+    <<: *api
+    depends_on:
+      db: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8010/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+  worker:
+    <<: *api
+    command: [python, -m, app.worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "from app.db import SessionLocal, now; from app.models import WorkerHeartbeat; from datetime import timedelta; db=SessionLocal(); h=db.get(WorkerHeartbeat,'scheduler'); assert h and h.seen_at > now()-timedelta(seconds=90)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    ports: [127.0.0.1:8080:80]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  https:
+    image: caddy:2-alpine
+    profiles: [production]
+    ports: [80:80, 443:443]
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    volumes: [./infra/Caddyfile:/etc/caddy/Caddyfile:ro, tls:/data, caddy_config:/config]
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  database:
+  files:
+  tls:
+  caddy_config:

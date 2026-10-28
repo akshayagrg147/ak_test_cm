@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ViaCRM · Brand identity</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f2f5fa;
+        color: #162b49;
+        font:
+          16px/1.6 Arial,
+          sans-serif;
+      }
+      .sheet {
+        max-width: 1120px;
+        margin: auto;
+        padding: 54px 48px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #52617b;
+        font-weight: 700;
+      }
+      .hero {
+        background: white;
+        border: 1px solid #e0e6f0;
+        border-radius: 24px;
+        padding: 68px 64px;
+        margin-top: 22px;
+      }
+      .hero img {
+        display: block;
+        width: 390px;
+        max-width: 100%;
+        height: auto;
+      }
+      h1 {
+        font-size: 40px;
+        line-height: 1.22;
+        letter-spacing: -0.04em;
+        max-width: 580px;
+        margin: 44px 0 16px;
+        font-weight: 600;
+      }
+      p {
+        color: #52617b;
+        margin: 0;
+        max-width: 550px;
+      }
+      .variants {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 18px 0;
+      }
+      .variant {
+        min-height: 166px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 20px;
+        background: #162b49;
+        border: 1px solid #e0e6f0;
+        padding: 32px;
+      }
+      .variant.light {
+        background: white;
+      }
+      .variant img {
+        width: 310px;
+        max-width: 100%;
+        height: auto;
+      }
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-top: 20px;
+      }
+      .swatch {
+        border-radius: 16px;
+        background: white;
+        overflow: hidden;
+        border: 1px solid #e0e6f0;
+      }
+      .color {
+        height: 54px;
+      }
+      .swatch strong,
+      .swatch small {
+        display: block;
+        padding: 0 16px;
+      }
+      .swatch strong {
+        padding-top: 12px;
+        font-size: 14px;
+      }
+      .swatch small {
+        padding-bottom: 12px;
+        color: #52617b;
+        font-size: 12px;
+      }
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        font-size: 13px;
+        margin-top: 28px;
+        color: #52617b;
+      }
+      .footer span {
+        max-width: 610px;
+      }
+      .footer b {
+        color: #162b49;
+      }
+      @media (max-width: 600px) {
+        .sheet {
+          padding: 28px 20px;
+        }
+        .hero {
+          padding: 34px 24px;
+        }
+        h1 {
+          font-size: 30px;
+          margin-top: 34px;
+        }
+        .variants {
+          grid-template-columns: 1fr;
+        }
+        .palette {
+          grid-template-columns: 1fr 1fr;
+        }
+        .footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <div class="eyebrow">ViaCRM · Brand identity / 01</div>
+      <section class="hero">
+        <img src="viacrm-logo.svg" alt="ViaCRM" />
+        <h1>Every lead.<br />A way forward.</h1>
+        <p>
+          A connected V, built around progress. A clear identity for the people,
+          properties and conversations that move your business forward.
+        </p>
+      </section>
+      <div class="variants">
+        <div class="variant">
+          <img src="viacrm-logo-on-dark.svg" alt="ViaCRM on dark background" />
+        </div>
+        <div class="variant light">
+          <img src="viacrm-logo-monochrome.svg" alt="ViaCRM in one color" />
+        </div>
+      </div>
+      <div class="eyebrow">Core palette</div>
+      <div class="palette">
+        <div class="swatch">
+          <div class="color" style="background: #264edb"></div>
+          <strong>Via blue</strong><small>#264EDB</small>
+        </div>
+        <div class="swatch">
+          <div class="color" style="background: #91ecd3"></div>
+          <strong>Forward mint</strong><small>#91ECD3</small>
+        </div>
+        <div class="swatch">
+          <div class="color" style="background: #162b49"></div>
+          <strong>Deep ink</strong><small>#162B49</small>
+        </div>
+        <div class="swatch">
+          <div class="color" style="background: #f2f5fa"></div>
+          <strong>Open canvas</strong><small>#F2F5FA</small>
+        </div>
+      </div>
+      <footer class="footer">
+        <span
+          ><b>Designed to stay clear.</b> Use the full logo where space allows,
+          the symbol for compact navigation, and the single-color version for
+          print.</span
+        ><span>viacrm / 2026</span>
+      </footer>
+    </main>
+  </body>
+</html>

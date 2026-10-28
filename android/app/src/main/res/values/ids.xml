@@ -1,0 +1,35 @@
+<resources>
+    <item name="server_address" type="id"/><item name="login_phone" type="id"/>
+    <item name="login_password" type="id"/><item name="login_code" type="id"/>
+    <item name="sync_status" type="id"/><item name="calling_code" type="id"/>
+    <item name="sync_consent" type="id"/><item name="enable_sync" type="id"/>
+    <item name="sync_now" type="id"/><item name="connect_folder" type="id"/>
+    <item name="connection_settings" type="id"/><item name="login_submit" type="id"/>
+    <item name="nav_home" type="id"/><item name="nav_customers" type="id"/>
+    <item name="nav_settings" type="id"/><item name="customer_search" type="id"/>
+    <item name="upload_heading" type="id"/><item name="recording_status" type="id"/>
+    <item name="pause_sync" type="id"/><item name="skip_recordings" type="id"/>
+    <item name="nav_calls" type="id"/><item name="property_catalogue" type="id"/>
+    <item name="calls_all" type="id"/><item name="calls_missed" type="id"/>
+    <item name="calls_audio" type="id"/><item name="calls_list" type="id"/>
+    <item name="lead_list" type="id"/><item name="today_count" type="id"/>
+    <item name="property_search" type="id"/><item name="property_submit" type="id"/>
+    <item name="property_results" type="id"/><item name="property_retry" type="id"/>
+    <item name="property_previous" type="id"/><item name="property_next" type="id"/>
+    <item name="property_type" type="id"/><item name="property_listing" type="id"/>
+    <item name="property_back" type="id"/><item name="property_refresh" type="id"/>
+    <item name="sign_out" type="id"/>
+    <item name="refresh_leads" type="id"/><item name="lead_status" type="id"/>
+    <item name="crm_back" type="id"/><item name="crm_lead_name" type="id"/>
+    <item name="crm_calls" type="id"/><item name="crm_notes" type="id"/>
+    <item name="crm_activity" type="id"/><item name="crm_tasks" type="id"/>
+    <item name="crm_files" type="id"/><item name="crm_content" type="id"/>
+    <item name="crm_summary" type="id"/><item name="crm_dial" type="id"/>
+    <item name="crm_refresh" type="id"/><item name="crm_page" type="id"/>
+    <item name="crm_previous" type="id"/><item name="crm_next" type="id"/>
+    <item name="crm_play" type="id"/><item name="crm_save" type="id"/>
+    <item name="crm_retry" type="id"/><item name="crm_transfer" type="id"/>
+    <item name="crm_media_status" type="id"/><item name="crm_media_time" type="id"/>
+    <item name="crm_seek" type="id"/><item name="crm_audio_toggle" type="id"/>
+    <item name="lead_history" type="id"/>
+</resources>

@@ -1,0 +1,228 @@
+.callback-alert-anchor {
+  position: relative;
+}
+.callback-alert-bell {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.callback-alert-bell.has-overdue {
+  color: #ab342d;
+  background: #fff3f0;
+  border-radius: 12px;
+}
+.callback-alert-count {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 23px;
+  min-height: 23px;
+  padding: 1px 5px;
+  border: 2px solid white;
+  border-radius: 14px;
+  background: #ac342c;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+.callback-alert-count.unavailable {
+  background: #79591c;
+}
+.callback-alert-other-dot {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid white;
+  background: #3659d9;
+}
+.callback-alert-panel {
+  position: fixed;
+  z-index: 90;
+  width: min(420px, calc(100vw - 24px));
+  overflow: auto;
+  padding: 18px;
+  background: #fff;
+  color: #1b2c49;
+  border: 1px solid #dfe5ef;
+  border-radius: 16px;
+  box-shadow: 0 16px 54px #182e4e28;
+}
+.callback-alert-panel > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.callback-alert-panel > header > div {
+  flex: 1;
+  min-width: 0;
+}
+.callback-alert-panel h2 {
+  font-size: 1.125rem;
+  margin: 2px 0 5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.callback-alert-panel > header p {
+  font-size: 0.875rem;
+  color: #835039;
+  margin: 0;
+  line-height: 1.6;
+}
+.callback-alert-panel > header .icon-button {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+}
+.callback-alert-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  background: #eff3f9;
+  padding: 4px;
+  border-radius: 11px;
+  margin-bottom: 16px;
+}
+.callback-alert-filters button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  background: transparent;
+  color: #4c5f7a;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.callback-alert-filters button[aria-pressed="true"] {
+  background: white;
+  color: #294bc4;
+  box-shadow: 0 1px 4px #1b365515;
+}
+.callback-alert-filters button span {
+  margin-left: 6px;
+  font-weight: 700;
+}
+.callback-alert-list > a {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e6ebf3;
+  color: #1b2c49;
+}
+.callback-alert-list > a:first-child {
+  padding-top: 0;
+}
+.callback-alert-list > a:hover {
+  background: #f8faff;
+}
+.callback-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: #eef2fb;
+  color: #45608e;
+  border-radius: 10px;
+}
+.callback-alert-list > a.overdue .callback-alert-icon {
+  color: #a43b32;
+  background: #fff0eb;
+}
+.callback-alert-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.callback-alert-content strong {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.callback-alert-content > span {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.callback-alert-content small {
+  font-size: 0.875rem;
+  color: #58677f;
+  line-height: 1.5;
+}
+.callback-alert-content b {
+  color: #a43b32;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.callback-alert-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 10px;
+  text-align: center;
+}
+.callback-alert-empty svg {
+  color: #526b94;
+}
+.callback-alert-empty strong {
+  font-size: 1rem;
+}
+.callback-alert-empty p {
+  font-size: 0.875rem;
+  color: #58677f;
+  line-height: 1.6;
+  margin: 0;
+}
+.callback-alert-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+}
+.callback-alert-pagination span {
+  color: #58677f;
+  font-size: 0.875rem;
+  margin-right: auto;
+}
+.callback-alert-pagination button {
+  min-height: 44px;
+  border: 1px solid #dbe2ee;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #294bc4;
+  background: white;
+  font-size: 0.875rem;
+}
+.callback-alert-help {
+  border-top: 1px solid #e6ebf3;
+  padding-top: 14px;
+  margin: 15px 0 8px;
+  font-size: 0.875rem;
+  color: #58677f;
+  line-height: 1.65;
+}
+.callback-alert-zone {
+  display: block;
+  color: #58677f;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 420px) {
+  .callback-alert-panel {
+    padding: 15px;
+  }
+  .callback-alert-icon {
+    display: none;
+  }
+}

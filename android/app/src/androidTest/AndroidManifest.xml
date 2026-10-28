@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- QA APK only: supplies a deterministic SAF audio document, never shipped in the app. -->
+        <provider android:name="com.aven.calls.RecordingDocuments" android:authorities="com.aven.calls.qa.documents" android:exported="true" android:permission="android.permission.MANAGE_DOCUMENTS" android:grantUriPermissions="true" />
+        <provider android:name="com.aven.calls.RecordingDocuments$Control" android:authorities="com.aven.calls.qa.control" android:exported="true" />
+    </application>
+</manifest>

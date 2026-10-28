@@ -1,0 +1,11 @@
+<resources>
+    <string name="crm_paused">Paused</string>
+    <string name="crm_audio_play">Play</string>
+    <string name="crm_playing">Playing</string>
+    <string name="crm_pause">Pause</string>
+    <string name="crm_finished">Finished</string>
+    <string name="crm_play_again">Play again</string>
+    <string name="crm_audio_unavailable">This audio format couldn\'t be played.</string>
+    <string name="crm_audio_busy">Audio is busy. Tap Play to try again.</string>
+    <string name="crm_recording_time">%1$s / %2$s</string>
+</resources>

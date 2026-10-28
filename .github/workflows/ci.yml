@@ -1,0 +1,153 @@
+name: ViaCRM CI and deployment
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  deployment-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m unittest discover -s scripts/deploy -p 'test_*.py' -v
+      - run: bash -n scripts/deploy/deploy.sh
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python scripts/configure.py
+      - run: pip install httpx==0.28.1
+      - run: echo 'PUBLIC_ORIGIN=http://localhost:8080' >> .env
+      - run: 'echo "services: {}" > /tmp/viacrm-ci-override.yaml'
+      - run: docker compose -p aven-ci up --build -d --wait --wait-timeout 300
+      - run: docker compose -p aven-ci exec -T api python -m app.seed
+      - run: python scripts/verify_container.py --project aven-ci --env-file .env --override /tmp/viacrm-ci-override.yaml --url http://localhost:8080
+      - name: Remove disposable CI stack
+        if: always()
+        run: docker compose -p aven-ci down --volumes --remove-orphans
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+        working-directory: android
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: {POSTGRES_USER: crm, POSTGRES_PASSWORD: ci-only-password, POSTGRES_DB: talkocrm_test}
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U crm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://crm:ci-only-password@localhost:5432/talkocrm_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r backend/requirements.lock
+      - run: ruff check app tests
+        working-directory: backend
+      - run: pytest -q --cov=app --cov-report=xml
+        working-directory: backend
+  browser:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: {POSTGRES_USER: crm, POSTGRES_PASSWORD: ci-only-password, POSTGRES_DB: talkocrm_ci_test}
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U crm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://crm:ci-only-password@localhost:5432/talkocrm_ci_test
+      ENVIRONMENT: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm, cache-dependency-path: web/package-lock.json}
+      - run: pip install -r backend/requirements.lock
+      - run: npm ci && npm run lint && npm run build && npx playwright install --with-deps chromium
+        working-directory: web
+      - run: python scripts/test_browser.py --production
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: verification, path: artifacts/}
+  deploy:
+    needs: [android, backend, browser, deployment-tools, containers]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    concurrency:
+      group: viacrm-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-south-1
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      RELEASE_BUCKET: ${{ vars.RELEASE_BUCKET }}
+      API_REPOSITORY: ${{ vars.API_REPOSITORY }}
+      WEB_REPOSITORY: ${{ vars.WEB_REPOSITORY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check that this is still the latest main commit
+        id: latest
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then echo 'deploy=true' >> "$GITHUB_OUTPUT"; fi
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        if: steps.latest.outputs.deploy == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: viacrm-${{ github.run_id }}
+      - uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2
+        if: steps.latest.outputs.deploy == 'true'
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        if: steps.latest.outputs.deploy == 'true'
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        if: steps.latest.outputs.deploy == 'true'
+        id: api
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ vars.API_REPOSITORY }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: VCS_REF=${{ github.sha }}
+          cache-from: type=gha,scope=viacrm-api
+          cache-to: type=gha,mode=max,scope=viacrm-api
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        if: steps.latest.outputs.deploy == 'true'
+        id: web
+        with:
+          context: .
+          file: infra/web.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ vars.WEB_REPOSITORY }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: VCS_REF=${{ github.sha }}
+          cache-from: type=gha,scope=viacrm-web
+          cache-to: type=gha,mode=max,scope=viacrm-web
+      - name: Package and deploy the tested release
+        if: steps.latest.outputs.deploy == 'true'
+        env:
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WEB_DIGEST: ${{ steps.web.outputs.digest }}
+          POSTGRES_IMAGE: ${{ vars.POSTGRES_IMAGE }}
+          CADDY_IMAGE: ${{ vars.CADDY_IMAGE }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$head" != "$GITHUB_SHA" ]; then echo 'A newer main commit will deploy instead'; exit 0; fi
+          python3 scripts/deploy/package_release.py --output release.tar.gz --sha "$GITHUB_SHA" --api-image "$API_REPOSITORY@$API_DIGEST" --web-image "$WEB_REPOSITORY@$WEB_DIGEST" --postgres-image "$POSTGRES_IMAGE" --caddy-image "$CADDY_IMAGE"
+          aws s3 cp release.tar.gz "s3://$RELEASE_BUCKET/releases/$GITHUB_SHA.tar.gz" --sse AES256 --only-show-errors
+          python3 scripts/deploy/dispatch.py --instance "$EC2_INSTANCE_ID" --sha "$GITHUB_SHA"

@@ -1,0 +1,1 @@
+-keep class com.aven.calls.SyncWorker { public <init>(android.content.Context,androidx.work.WorkerParameters); }

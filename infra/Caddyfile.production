@@ -1,0 +1,14 @@
+{
+    admin off
+}
+{$PUBLIC_HOST} {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    encode zstd gzip
+    reverse_proxy web:80
+    header Strict-Transport-Security "max-age=31536000"
+}

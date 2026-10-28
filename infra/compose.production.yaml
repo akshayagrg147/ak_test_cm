@@ -1,0 +1,69 @@
+name: viacrm
+x-app: &app
+  image: ${API_IMAGE:?An immutable API image is required}
+  env_file: ${DEPLOY_ROOT:-/opt/viacrm}/shared/app.env
+  environment:
+    RELEASE_SHA: ${RELEASE_SHA:?A release commit is required}
+  volumes: [files:/storage]
+  restart: unless-stopped
+  stop_grace_period: 30s
+  logging: &logging
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?A pinned PostgreSQL image is required}
+    env_file: ${DEPLOY_ROOT:-/opt/viacrm}/shared/database.env
+    volumes: [database:/var/lib/postgresql/data]
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U crm -d talkocrm]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  api:
+    <<: *app
+    healthcheck:
+      test: [CMD, python, -c, "import json,urllib.request; h=json.load(urllib.request.urlopen('http://localhost:8010/api/health',timeout=5)); assert h['status']=='ok' and h['database']=='ok' and h['worker']=='ok'"]
+      interval: 10s
+      timeout: 6s
+      start_period: 30s
+      retries: 18
+  worker:
+    <<: *app
+    command: [python, -m, app.worker]
+    healthcheck:
+      test: [CMD, python, -c, "from app.db import SessionLocal,now; from app.models import WorkerHeartbeat; from datetime import timedelta; db=SessionLocal(); h=db.get(WorkerHeartbeat,'scheduler'); assert h and h.seen_at > now()-timedelta(seconds=90)"]
+      interval: 15s
+      timeout: 6s
+      start_period: 30s
+      retries: 12
+  web:
+    image: ${WEB_IMAGE:?An immutable web image is required}
+    depends_on:
+      api: {condition: service_healthy}
+    ports: [127.0.0.1:8080:80]
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/release.json]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  https:
+    image: ${CADDY_IMAGE:?A pinned Caddy image is required}
+    ports: [80:80, 443:443, 443:443/udp]
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?A public host is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    logging: *logging
+volumes:
+  database: {name: viacrm_database}
+  files: {name: viacrm_files}
+  tls: {name: viacrm_tls}
+  caddy_config: {name: viacrm_caddy_config}

@@ -76,11 +76,14 @@ for attempt in range(60):
             raise RuntimeError('Public HTTPS health/release verification did not pass') from None
         time.sleep(5)
 PY
+maintenance=false
 if [[ -n "$previous_dir" && -f "$previous_dir/images.env" ]]; then
     ln -sfn "$previous_dir" "$deploy_root/previous"
 fi
 ln -sfn "$release_dir" "$deploy_root/current"
 # Compose already removes superseded containers. Remove unused project images,
 # retaining current and previous images for a schema-compatible rollback.
-python3 "$release_dir/cleanup_images.py" "$deploy_root"
+if ! python3 "$release_dir/cleanup_images.py" "$deploy_root"; then
+    echo 'Application is healthy; image cleanup needs operator attention'
+fi
 echo "Deployed $RELEASE_SHA successfully"

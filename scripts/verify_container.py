@@ -184,5 +184,7 @@ with (
         )
 state = json.loads(run("ps", "--format", "json").splitlines()[0])
 check(bool(state), "Compose reports running services after the drill")
-Path(args.report).write_text("\n".join(report) + "\n")
+report_path = Path(args.report)
+report_path.parent.mkdir(parents=True, exist_ok=True)
+report_path.write_text("\n".join(report) + "\n")
 print("\n".join(report))

@@ -26,14 +26,15 @@ def template():
     user_data = r"""#!/bin/bash
 set -euo pipefail
 umask 077
-dnf install -y docker awscli2 python3 tar gzip util-linux
+dnf install -y docker python3 tar gzip util-linux
+command -v aws
 systemctl enable --now docker
 mkdir -p /usr/local/lib/docker/cli-plugins /opt/viacrm/bin /opt/viacrm/shared /opt/viacrm/releases /opt/viacrm/backups
-curl --fail --location --retry 5 https://github.com/docker/compose/releases/download/${ComposeVersion}/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+curl --fail --location --retry 5 https://github.com/docker/compose/releases/download/${ComposeVersion}/docker-compose-linux-x86_64 -o /tmp/docker-compose-linux-x86_64
 curl --fail --location --retry 5 https://github.com/docker/compose/releases/download/${ComposeVersion}/checksums.txt -o /tmp/compose-checksums.txt
-cd /usr/local/lib/docker/cli-plugins
+cd /tmp
 grep 'docker-compose-linux-x86_64$' /tmp/compose-checksums.txt | sha256sum --check
-chmod 755 docker-compose
+install -m 755 docker-compose-linux-x86_64 /usr/local/lib/docker/cli-plugins/docker-compose
 cat > /opt/viacrm/shared/host.env <<'ENV'
 AWS_REGION=${AWS::Region}
 ECR_REGISTRY=${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com

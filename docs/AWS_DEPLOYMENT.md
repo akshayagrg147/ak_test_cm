@@ -9,7 +9,7 @@ committed and pushed; a failed check prevents deployment.
 
 1. Run Android, backend, built-browser, deployment-tool and Docker persistence checks.
 2. Build Linux AMD64 API and web images and push them to private Amazon ECR repositories.
-3. Authenticate to AWS with GitHub OIDC. The role trusts only this repository's `main` branch.
+3. Authenticate to AWS with GitHub OIDC. The role trusts only this repository's `main` branch, using the exact ID-based subject prefix from its GitHub OIDC settings.
 4. Package immutable image digests and deployment scripts in the private encrypted S3 release bucket.
 5. Run the release on the dedicated Mumbai EC2 instance through Systems Manager.
 6. Pull images, stop application writes, and back up the database, uploaded files and matching secret configuration.
@@ -50,6 +50,12 @@ Host secrets are generated once under `/opt/viacrm/shared`, owned by root with
 database password. No long-lived AWS keys or SSH private keys are stored in GitHub.
 
 GitHub Actions repository variables:
+
+The CloudFormation `GitHubSubjectPrefix` parameter must match the repository's
+`sub_claim_prefix` from `gh api repos/OWNER/REPO/actions/oidc/customization/sub`.
+This repository enables immutable owner/repository IDs. Do not disable that
+setting or replace the exact `main` subject with a wildcard to resolve a login
+failure.
 
 | Variable | Purpose |
 | --- | --- |

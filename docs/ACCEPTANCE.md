@@ -2,7 +2,35 @@
 
 ## Final scope
 
-Independent web CRM, API, PostgreSQL persistence, durable workers, public website, platform-owner workspace, team operations and deployment packaging. **WhatsApp remains excluded. The user explicitly added the Android call-sync APK on 18 October 2026**, superseding the earlier Android exclusion. The APK syncs call metadata and accessible recordings created by the built-in Phone app. It does not capture cellular audio itself. No original source repository or production resource was modified. No site was deployed or repository pushed.
+Independent web CRM, API, PostgreSQL persistence, durable workers, public website, platform-owner workspace, team operations and deployment packaging. **WhatsApp remains excluded. The user explicitly added the Android call-sync APK on 18 October 2026**, superseding the earlier Android exclusion. The APK syncs call metadata and accessible recordings created by the built-in Phone app. It does not capture cellular audio itself. Original reference repositories and production resources remain isolated. The subsequently authorized AWS deployment is recorded below.
+
+## AWS deployment and CI/CD — 29 October 2026
+
+The dedicated `viacrm-production` stack runs one `t3.small` EC2 instance in Mumbai,
+with an encrypted 30 GiB gp3 volume, a stable public IP and public TCP 80/443.
+Administration uses SSM; PostgreSQL, API and SSH have no public inbound port.
+The site at **https://13.234.72.21** serves a publicly trusted Let's Encrypt IP
+certificate. Initial API, database and worker health checks passed. The real
+production owner was created separately and a successful HTTPS login, correct
+owner identity and Secure/HttpOnly/SameSite=Strict cookie were verified. No
+development accounts, local customer records or recordings were migrated.
+
+GitHub Actions run **40744261631** verified **288 backend tests**, **86 Chromium
+browser journeys**, **7 deployment-tool tests**, Android JVM/lint/debug builds,
+and a Docker persistence drill. The drill verified database records, Unicode,
+uploaded bytes, refresh sessions and worker health after container restarts.
+The initial production deployment then completed successfully through GitHub
+OIDC, ECR, S3 and SSM. AWS trust uses the repository's exact immutable subject
+prefix and `main` branch. The IP HTTPS configuration supplies a default SNI for
+clients that omit it; certificate validation remains enabled.
+
+Production updates stop writes for a coordinated database/files/secrets backup,
+apply Alembic migrations and verify the exact public release before marking it
+current. Replaced containers are removed; named data volumes remain. Current
+and previous application images are retained, and cleanup is limited to unused
+ViaCRM images. The production installation is a single server with host-local
+recovery points; off-host disaster recovery and multi-zone failover are not
+claimed. See [AWS operations](AWS_DEPLOYMENT.md).
 
 ## ViaCRM brand identity — 25 October 2026
 

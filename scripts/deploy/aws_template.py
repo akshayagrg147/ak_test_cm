@@ -283,9 +283,9 @@ touch /opt/viacrm/shared/host-ready
                             "Condition": {
                                 "StringEquals": {
                                     "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-                                    "token.actions.githubusercontent.com:sub": SUB(
-                                        "repo:${GitHubRepository}:ref:refs/heads/main"
-                                    ),
+                                "token.actions.githubusercontent.com:sub": SUB(
+                                    "${GitHubSubjectPrefix}:ref:refs/heads/main"
+                                ),
                                 }
                             },
                         }
@@ -393,6 +393,12 @@ touch /opt/viacrm/shared/host-ready
                 "Type": "String",
                 "Default": "akshayagrg147/ak_test_cm",
                 "AllowedPattern": "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",
+            },
+            "GitHubSubjectPrefix": {
+                "Type": "String",
+                "Default": "repo:akshayagrg147@54131590/ak_test_cm@1437454984",
+                "AllowedPattern": "repo:[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+",
+                "Description": "Exact sub_claim_prefix from the repository OIDC settings, including immutable IDs when enabled",
             },
             "Domain": {
                 "Type": "String",

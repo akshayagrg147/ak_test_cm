@@ -134,7 +134,7 @@ class Infrastructure(unittest.TestCase):
             trust["Condition"]["StringEquals"][
                 "token.actions.githubusercontent.com:sub"
             ],
-            {"Fn::Sub": "repo:${GitHubRepository}:ref:refs/heads/main"},
+            {"Fn::Sub": "${GitHubSubjectPrefix}:ref:refs/heads/main"},
         )
         host = config["Resources"]["Host"]
         self.assertEqual(host["DeletionPolicy"], "Retain")

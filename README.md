@@ -1,5 +1,8 @@
 # ViaCRM
 
+Live production: **[https://13.234.72.21](https://13.234.72.21)**, hosted on the
+dedicated EC2 instance in AWS Mumbai (`ap-south-1`).
+
 Production deployment and automatic updates from Git are described in the
 [AWS deployment guide](docs/AWS_DEPLOYMENT.md). A push to `main` deploys only
 after the required checks pass and preserves database/upload volumes.
@@ -11,7 +14,24 @@ unchanged by this extension. Super admin creates company admin logins, manages
 branding/logos and confirms UPI or collected cash before subscription activation.
 Configure your payment methods and publish your own plans in Super admin.
 
-An independent, locally runnable CRM built from the supplied acceptance brief. **WhatsApp is excluded.** The user added an Android call-sync companion on 18 October 2026, using the phone's built-in recordings and explicit folder access. See the [Android setup and limitations](android/README.md). No production system, original repository, DNS, cloud credential or production database was used.
+An independent CRM built from the supplied acceptance brief. **WhatsApp is excluded.** The user added an Android call-sync companion on 18 October 2026, using the phone's built-in recordings and explicit folder access. See the [Android setup and limitations](android/README.md). The original local implementation kept reference repositories and production resources isolated; hosting now uses a separate, explicitly authorized AWS environment.
+
+## Automatic production updates
+
+Commit changes and push them to `main` in
+[`akshayagrg147/ak_test_cm`](https://github.com/akshayagrg147/ak_test_cm):
+
+```bash
+git add .
+git commit -m "Describe your change"
+git push origin main
+```
+
+[GitHub Actions](https://github.com/akshayagrg147/ak_test_cm/actions) runs the
+required checks, publishes immutable images, backs up production data and
+replaces the application containers. Failed checks prevent deployment. Database,
+uploads, encryption keys and login accounts persist across releases. Updates
+have a short maintenance window. See the [operations guide](docs/AWS_DEPLOYMENT.md).
 
 ## Start locally
 
@@ -58,6 +78,13 @@ Companies are onboarded by the super admin. **Companies → Manage** adds/edits 
 
 ## Verification
 
+The initial AWS release passed **288 backend tests**, **86 Chromium browser
+journeys**, **7 deployment-tool tests**, Android unit/build/lint checks and a
+Docker restart/persistence drill. Public HTTPS, API/database/worker health and
+the separately initialized production-owner login were verified on the server.
+Historical `artifacts/` links below refer to local evidence excluded from Git;
+current automated results and downloadable reports are in GitHub Actions.
+
 The field-executive extension passed **269 backend tests** (90.77% line coverage)
 and **70 full browser journeys per Chromium, Firefox and WebKit**. Further focused
 checks cover the final phone layout and field-staff time approval. Android source
@@ -100,7 +127,7 @@ Read [acceptance and test results](docs/ACCEPTANCE.md), [permissions and domain 
 
 ## Production boundary
 
-Do not use development accounts or local database configuration in production. Provision a fresh database and private storage, run `python scripts/configure.py`, set `ENVIRONMENT=production`, a unique HTTPS `PUBLIC_ORIGIN`, `DOMAIN`, and real contact details. Apply migrations and create the first owner interactively using `python -m app.seed --bootstrap-owner` from `backend`. Provider accounts must be configured and verified with real delivery. Deployment is a separate operation; this project has not been deployed.
+Do not use development accounts or local database configuration in production. The AWS installation uses a fresh database, private storage, unique production secrets and a separately initialized owner. For a new independent environment, provision fresh storage and secrets, set `ENVIRONMENT=production` and a unique HTTPS `PUBLIC_ORIGIN`, apply migrations and create the first owner using `python -m app.seed --bootstrap-owner`. Provider accounts must be configured and verified with real delivery. See the [AWS deployment and recovery guide](docs/AWS_DEPLOYMENT.md).
 
 ## Client presentation and visual identity
 

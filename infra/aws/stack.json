@@ -25,6 +25,12 @@
       "Default": "akshayagrg147/ak_test_cm",
       "AllowedPattern": "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
     },
+    "GitHubSubjectPrefix": {
+      "Type": "String",
+      "Default": "repo:akshayagrg147@54131590/ak_test_cm@1437454984",
+      "AllowedPattern": "repo:[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+",
+      "Description": "Exact sub_claim_prefix from the repository OIDC settings, including immutable IDs when enabled"
+    },
     "Domain": {
       "Type": "String",
       "Default": "",
@@ -368,7 +374,7 @@
                 "StringEquals": {
                   "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
                   "token.actions.githubusercontent.com:sub": {
-                    "Fn::Sub": "repo:${GitHubRepository}:ref:refs/heads/main"
+                    "Fn::Sub": "${GitHubSubjectPrefix}:ref:refs/heads/main"
                   }
                 }
               }

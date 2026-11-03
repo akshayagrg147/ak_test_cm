@@ -905,6 +905,11 @@ test("no-show requires a next step; another visit cancels the old follow-up and 
 }) => {
   const seed = await prepare(workspace);
   await createApi(seed.callerApi, seed, -60000);
+  let releaseRefreshes!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefreshes = resolve;
+  });
+  let heldRefreshes = 0;
   try {
     await login(page, seed.executive.phone);
     await page
@@ -941,10 +946,19 @@ test("no-show requires a next step; another visit cancels the old follow-up and 
     await outcome
       .getByLabel("Follow-up date & time", { exact: true })
       .fill(local(7200000));
+    // Keep background reads pending: subsequent actions must use the successful
+    // mutation's version, rather than depend on a fast query refresh.
+    await page.route("**/api/field-work?**", async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      heldRefreshes += 1;
+      await refreshGate;
+      if (!route.request().failure()) await route.continue();
+    });
     await outcome
       .getByRole("button", { name: "Save field update", exact: true })
       .click();
     await expect(outcome).toHaveCount(0);
+    await expect.poll(() => heldRefreshes).toBeGreaterThan(0);
     await page
       .getByRole("button", {
         name: "Reschedule / arrange another visit",
@@ -990,6 +1004,10 @@ test("no-show requires a next step; another visit cancels the old follow-up and 
       .getByRole("button", { name: "Save field update", exact: true })
       .click();
     await expect(close).toHaveCount(0);
+    releaseRefreshes();
+    // Mutations cancel older GETs. Do not wait for those aborted interceptions
+    // to continue; the successful PATCHes above already verify the versions.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await page
       .getByLabel("Work status", { exact: true })
       .selectOption("closed");
@@ -1014,6 +1032,8 @@ test("no-show requires a next step; another visit cancels the old follow-up and 
       }),
     ).toBeVisible();
   } finally {
+    releaseRefreshes();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
     await seed.callerApi.dispose();
   }
 });

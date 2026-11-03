@@ -1088,3 +1088,42 @@ QA fixtures used disposable databases only; no business records were edited in
 the working CRM. Temporary QA databases/services were removed. Web 5173 and API
 8010 remain running. This adds in-CRM alerts, not closed-browser push messages.
 See `QA_REPORT.md` and `verification.json` for evidence and verified source hashes.
+
+## PDF validation and HTTPS trust security fixes — 3 November 2026
+
+Updated the locked runtime dependencies to `pypdf==6.21.4` and
+`certifi==2026.10.23` for
+[GHSA-5849-834g-hvw5](https://github.com/py-pdf/pypdf/security/advisories/GHSA-5849-834g-hvw5)
+and [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2).
+The new regressions fail with the previous dependencies and pass with these pins.
+The malformed-PDF test first exercises the actual validator in a subprocess with
+a ten-second timeout, then verifies an API rejection with no saved attachment and
+a successful valid-PDF upload/download afterward. The CA test verifies that the
+affected emSign ECC Root CA G3 is absent while retaining a usable trust bundle.
+
+The browser run also exposed an existing field-handoff refresh race. Successful
+mutations now publish their returned row to the current company/user's field-work
+caches after cancelling older reads. Subsequent dialogs receive the new version;
+open-form version checks and server concurrency protection remain intact. The
+regression holds refresh GETs pending through outcome, reschedule and closure,
+and fails against the previous UI bundle.
+
+| Check | Executed result | Evidence under `artifacts/security-fixes-20261103/` |
+| --- | --- | --- |
+| Security regressions before / after the dependency update | **2 failed / 2 passed**, as expected | `before-fix.log`, `after-fix-targeted.log` |
+| Full backend regression and coverage | **290 passed**, 91.02% coverage; 28 existing warnings | `backend-full.log`, `backend-results.xml`, `coverage.json` |
+| Full Chromium regression on the final production UI | **86 passed**, no skipped/flaky/failed cases | `chromium-final/browser-tests.json` |
+| Final field-work journeys in Firefox / WebKit | **8 + 8 passed** | `field-firefox/browser-tests.json`, `field-webkit/browser-tests.json` |
+| Focused delayed-refresh regression | **1 passed**; previous UI failed the same case | `field-race-focused-v2/browser-tests.json`, `handoff-before-cache.log` |
+| Locked Python dependency audit / compatibility | **48 dependencies, zero known vulnerabilities**; `pip check` passed | `pip-audit.json`, `pip-check.log` |
+| Ruff, ESLint, TypeScript/production build, modified frontend formatting and whitespace | Passed | `ruff.log`, `web-lint.log`, `web-build-final.log` |
+| Deployment-tool regression / shell syntax | **7 passed** / passed | `deployment-tools.log` |
+| Outbound HTTPS using the patched default CA bundle | AWS health HTTP 200; app/database/worker healthy | `patched-ca-https-check.json` |
+
+Authenticated tests used disposable PostgreSQL databases and private test storage;
+temporary services and databases were removed. Existing Android/documentation
+changes in the original checkout were preserved. No schema, native source/APK or
+call-sync contract change was needed. These checks do not verify the previously
+deferred AWS backup, monitoring or customer-specific configuration review, or live
+third-party provider delivery. Existing bundle-size and test warnings remain.
+Deployment status is recorded by the GitHub Actions run for this commit.

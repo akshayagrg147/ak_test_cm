@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient, type QueryFilters } from "@tanstack/react-query";
 import {
   CalendarDays,
   Check,
@@ -380,6 +381,7 @@ function HandoffCard({
 }) {
   const { session } = useAuth(),
     action = useAction();
+  const queryClient = useQueryClient();
   const [dialog, setDialog] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(null);
@@ -388,13 +390,38 @@ function HandoffCard({
     ["admin", "manager"].includes(session?.role || "");
   const isActive = active(item);
   const patch = (data: Record<string, unknown>) =>
-    action(() =>
-      send(
+    action(async () => {
+      const updated = await send<FieldHandoff>(
         "/field-work/" + item.id,
         { version: item.version, ...data },
         "PATCH",
-      ),
-    );
+      );
+      const fieldQueries: QueryFilters = {
+        queryKey: [session?.organization?.id, session?.user.id],
+        predicate: (query) => {
+          const path = query.queryKey[2];
+          return (
+            typeof path === "string" && path.split("?")[0] === "/field-work"
+          );
+        },
+      };
+      // Cancel older reads before publishing this action's authoritative result.
+      // The next dialog must not capture the version preceding our own save.
+      await queryClient.cancelQueries(fieldQueries);
+      queryClient.setQueriesData<WorkData>(fieldQueries, (previous) =>
+        previous
+          ? {
+              ...previous,
+              items: previous.items.map((row) =>
+                row.id === updated.id && row.version <= updated.version
+                  ? updated
+                  : row,
+              ),
+            }
+          : previous,
+      );
+      return updated;
+    });
   async function accept() {
     setBusy(true);
     setError(null);

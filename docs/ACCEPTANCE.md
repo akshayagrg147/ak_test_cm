@@ -1158,3 +1158,11 @@ used isolated files and mocked cloud/process failures; they do not prove a live
 rollout. Final CI, domain activation, trusted certificate and public readiness
 results are recorded by the GitHub Actions runs and the task's final evidence.
 Existing user edits in the original checkout remain separate and untouched.
+
+The first live domain readiness check obtained trusted certificates but caught
+Nginx 502 responses after the API environment changed. Source review identified
+that an unchanged web container retained the API's previous startup DNS address.
+Domain activation and rollback now force recreation of all four application/
+proxy services. The 28 deployment tests and 11 Python 3.9 host tests pass with
+explicit regression assertions for forced web recreation on both paths. A
+passing static web healthcheck alone is not treated as public API readiness.

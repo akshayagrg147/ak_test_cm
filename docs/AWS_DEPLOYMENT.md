@@ -89,6 +89,12 @@ service configuration are restored. Inspect the SSM command before retrying an
 ambiguous submission or status timeout. No database migration or volume removal
 is part of this domain operation.
 
+The operation forces recreation of the web proxy together with the API, worker
+and HTTPS service on both activation and rollback. Nginx resolves the API's
+container address at startup; leaving the old web container running after an
+API replacement can produce 502 responses even when internal API health and the
+static web healthcheck pass.
+
 Set these non-secret values in `/opt/viacrm/shared/host.env`:
 
 ```dotenv

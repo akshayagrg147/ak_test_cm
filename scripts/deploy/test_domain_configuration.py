@@ -88,10 +88,11 @@ class DomainConfiguration(unittest.TestCase):
             self.assertEqual((self.shared / name).stat().st_mode & 0o777, 0o600)
         commands = [call.args[0] for call in self.runner.call_args_list]
         self.assertEqual(
-            commands[-1][-9:],
+            commands[-1][-10:],
             [
                 "up",
                 "-d",
+                "--force-recreate",
                 "--wait",
                 "--wait-timeout",
                 "240",
@@ -204,6 +205,12 @@ class DomainConfiguration(unittest.TestCase):
         self.assertEqual(
             sum("up" in call.args[0] for call in self.runner.call_args_list), 2
         )
+        for call in self.runner.call_args_list:
+            if "up" in call.args[0]:
+                # Both activation and rollback replace API containers; an
+                # unchanged web container would retain their old IP in Nginx.
+                self.assertIn("--force-recreate", call.args[0])
+                self.assertIn("web", call.args[0])
 
     def test_failed_rollback_reports_operator_attention(self):
         self.runner.return_value = SimpleNamespace(returncode=1)

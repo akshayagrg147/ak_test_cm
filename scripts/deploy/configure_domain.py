@@ -213,9 +213,12 @@ def configure(root, host, aliases, default_sni, expected_release):
                 )
 
         def apply():
+            # Nginx resolves the API container at startup. Recreate web as well
+            # when the API's environment changes, including during rollback.
             run(
                 "up",
                 "-d",
+                "--force-recreate",
                 "--wait",
                 "--wait-timeout",
                 "240",

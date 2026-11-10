@@ -56,6 +56,8 @@ services:
     ports: [80:80, 443:443, 443:443/udp]
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?A public host is required}
+      PUBLIC_ALIASES: ${PUBLIC_ALIASES:-}
+      TLS_DEFAULT_SNI: ${TLS_DEFAULT_SNI:-${PUBLIC_HOST}}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - tls:/data

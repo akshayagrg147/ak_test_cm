@@ -1,8 +1,8 @@
 {
     admin off
-    default_sni {$PUBLIC_HOST}
+    default_sni {$TLS_DEFAULT_SNI}
 }
-{$PUBLIC_HOST} {
+{$PUBLIC_HOST} {$PUBLIC_ALIASES} {
     tls {
         issuer acme {
             dir https://acme-v02.api.letsencrypt.org/directory
@@ -10,6 +10,11 @@
         }
     }
     encode zstd gzip
+    @alias_page {
+        not host {$PUBLIC_HOST}
+        not path /api /api/*
+    }
+    redir @alias_page https://{$PUBLIC_HOST}{uri} 308
     reverse_proxy web:80
     header Strict-Transport-Security "max-age=31536000"
 }

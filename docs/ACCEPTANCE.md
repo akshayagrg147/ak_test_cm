@@ -1127,3 +1127,34 @@ call-sync contract change was needed. These checks do not verify the previously
 deferred AWS backup, monitoring or customer-specific configuration review, or live
 third-party provider delivery. Existing bundle-size and test warnings remain.
 Deployment status is recorded by the GitHub Actions run for this commit.
+
+## ViaCRM domain configuration — 10 November 2026
+
+Production routing now supports `viacrm.in` with `www.viacrm.in` and the existing
+IP as optional aliases. Alias pages redirect to the primary domain with their
+path/query intact; `/api` and `/api/*` requests remain direct. The default TLS
+name can remain the existing IP for native clients that omit SNI. Unconfigured
+deployments retain the original IP-only behavior. No application, schema,
+Android source/APK or call-sync contract changes were needed.
+
+The manual **Configure ViaCRM domain** workflow uses the existing main-only
+OIDC/SSM role and production concurrency group. Its host operation requires the
+exact current release, validates DNS, holds the deployment lock, preserves
+private environment backups and secrets, recreates services and verifies trusted
+public health, release identity and redirects. Failure restores both environment
+files and the previous service settings. Submission is not automatically retried
+after an ambiguous timeout. See `docs/AWS_DEPLOYMENT.md` for the exact settings.
+
+| Check | Executed result | Evidence under `artifacts/domain-viacrm-20261110/` |
+| --- | --- | --- |
+| Deployment, domain transaction and SSM dispatcher unit tests | **28 passed** (7 existing, 11 host, 10 dispatch) | `deployment-unit-tests.log` |
+| Host-operation tests on the EC2 system's Python version | **11 passed** on Python 3.9; host/dispatch/packaging compile | `python39-tests.log` |
+| Actual Caddy 2.11.7 adaptation, validation and loopback routing | Both IP-only and domain/www/IP configurations passed; GET/POST/PATCH API routes, aliases, path/query redirects and Compose defaults checked | `caddy-verification.log` |
+| Changed Python Ruff/formatting, deployment shell syntax and whitespace | Passed | `checks.log` |
+| GoDaddy DNS | A `@` saved as `13.234.72.21`; existing `www` CNAME retained; both authoritative servers and Cloudflare/Google resolvers agree; no AAAA record | `dns-after-update.json`, `godaddy-dns-saved.jpg` |
+
+Routing checks used disposable loopback listeners. Host transaction/SSM tests
+used isolated files and mocked cloud/process failures; they do not prove a live
+rollout. Final CI, domain activation, trusted certificate and public readiness
+results are recorded by the GitHub Actions runs and the task's final evidence.
+Existing user edits in the original checkout remain separate and untouched.

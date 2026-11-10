@@ -80,6 +80,7 @@ class ReleasePackaging(unittest.TestCase):
                         "deploy.sh",
                         "host_config.py",
                         "cleanup_images.py",
+                        "configure_domain.py",
                         "images.env",
                     },
                 )

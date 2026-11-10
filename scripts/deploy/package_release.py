@@ -20,7 +20,12 @@ def package(output: Path, sha: str, images: dict[str, str]):
         "Caddyfile": ROOT / "infra/Caddyfile.production",
         **{
             name: ROOT / f"scripts/deploy/{name}"
-            for name in ["deploy.sh", "host_config.py", "cleanup_images.py"]
+            for name in [
+                "deploy.sh",
+                "host_config.py",
+                "cleanup_images.py",
+                "configure_domain.py",
+            ]
         },
     }
     output.parent.mkdir(parents=True, exist_ok=True)

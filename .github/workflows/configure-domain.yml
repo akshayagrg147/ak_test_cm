@@ -1,0 +1,36 @@
+name: Configure ViaCRM domain
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configure-domain:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: viacrm-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-south-1
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require the current main commit
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$head" = "$GITHUB_SHA"
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: viacrm-domain-${{ github.run_id }}
+      - name: Connect viacrm.in on the existing server
+        run: python3 scripts/deploy/dispatch_domain.py --instance "$EC2_INSTANCE_ID" --sha "$GITHUB_SHA"

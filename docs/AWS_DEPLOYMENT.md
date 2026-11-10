@@ -67,10 +67,82 @@ failure.
 
 Caddy obtains and renews publicly trusted certificates with the Let's Encrypt
 short-lived profile. Until a domain is configured, the stable public IP is the
-HTTPS address. To adopt a domain, point its A record at the server, update
-`PUBLIC_HOST` in `shared/host.env` and `PUBLIC_ORIGIN` in `shared/app.env`, then
-run the current release's `deploy.sh`. Review production CORS/refresh-cookie
-behavior when changing the origin; existing sessions may need to sign in again.
+HTTPS address. With no optional values, `PUBLIC_ALIASES` is empty and
+`TLS_DEFAULT_SNI` uses `PUBLIC_HOST`, preserving the existing IP configuration.
+
+For `viacrm.in`, first point its apex A record at the existing production IP
+`13.234.72.21` and set `www` to a CNAME for `viacrm.in`. Remove conflicting web A
+or AAAA records only; preserve mail MX/TXT records and unrelated DNS entries.
+Confirm the authoritative and public DNS answers before enabling the names in
+Caddy. Both names must reach this server on TCP 80/443 for certificate issuance;
+do not publish an AAAA record unless this host has working public IPv6.
+
+After the current `main` commit has passed CI and deployed, run the manual
+**Configure ViaCRM domain** GitHub Actions workflow on `main`. It uses the
+existing scoped deployment role and instance, without AWS root credentials or
+new IAM permissions. The operation is restricted to `viacrm.in`, `www.viacrm.in`
+and the existing IP. It requires that exact release to be active, checks DNS,
+takes the deployment lock, saves private copies of both environment files and
+recreates services with the values below. Trusted public health, release and
+alias checks must pass; otherwise both environment files and the previous
+service configuration are restored. Inspect the SSM command before retrying an
+ambiguous submission or status timeout. No database migration or volume removal
+is part of this domain operation.
+
+Set these non-secret values in `/opt/viacrm/shared/host.env`:
+
+```dotenv
+PUBLIC_HOST=viacrm.in
+PUBLIC_ALIASES="www.viacrm.in 13.234.72.21"
+TLS_DEFAULT_SNI=13.234.72.21
+```
+
+Update only `PUBLIC_ORIGIN="https://viacrm.in"` in `shared/app.env`, with no
+trailing slash. Preserve the database URL, signing/encryption keys and other
+values. `host_config.py` initializes secrets once; calling it with a new host
+does not update an existing `PUBLIC_ORIGIN`. Apply the release containing this
+Caddy/Compose configuration through the authorized deployment process. A rerun
+of an already-current release starts its containers but skips the script's
+public health/release verification, so perform those checks explicitly.
+
+Alias browser pages redirect to the same path and query on `https://viacrm.in`.
+The aliases' `/api` and `/api/*` routes continue proxying directly, including the
+old IP address. Keep `TLS_DEFAULT_SNI` set to the IP while it remains supported:
+IP clients can omit TLS SNI and still need the certificate valid for that IP.
+The existing Android app rejects HTTP redirects; redirecting its API requests
+would break sign-in, refresh and call uploads. Keep installed apps on their
+existing server setting. Signing in with a different server address clears the
+app's local call queue, contacts and recording-folder grant; do not migrate an
+app with pending local work by changing its address or reinstalling it. New
+installations can use `https://viacrm.in` without changing the call-sync API.
+
+Refresh cookies are host-only, Secure, HttpOnly and SameSite=Strict. Browser
+users sign in once at the new domain; existing IP cookies do not transfer.
+Production CORS and browser refresh/logout checks permit the exact
+`PUBLIC_ORIGIN`; do not broaden them or relax cookie settings for the move.
+The Justdial setup screen derives its webhook URL from the browser origin.
+Update any registered provider URL deliberately; the old IP API route remains
+available during migration. IndiaMART polling uses an outbound fixed URL.
+
+Before production changes, validate the Caddyfile using the pinned Caddy version:
+
+```bash
+python3 scripts/deploy/verify_caddy.py --caddy /path/to/verified/caddy
+```
+
+This check requires the Docker Compose CLI, without a running Docker daemon.
+It verifies Compose defaults, adapts and validates both the original IP and
+domain/alias configurations, then checks routing on disposable loopback HTTP
+listeners without issuing certificates or contacting the production CRM. After
+application, verify trusted TLS for the domain, `www` and the IP without disabling
+certificate verification; domain `/api/health` must report application, database
+and worker `ok`, and `/release.json` must match the intended commit. Check alias
+page redirects preserve path/query, IP API requests do not redirect, and a real
+browser can sign in, reload to refresh its session and sign out at the domain.
+An unauthenticated refresh request with `X-Requested-With: TalkoCRM` should reach
+authentication (401) for the canonical origin or no Origin header, while a
+different Origin is rejected (403). Preserve the previous host/origin settings
+privately so a configuration rollback can restore both together.
 
 ## Operations and recovery
 

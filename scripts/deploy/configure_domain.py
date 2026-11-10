@@ -149,6 +149,18 @@ def configure(root, host, aliases, default_sni, expected_release):
                 )
         paths = [shared / "host.env", shared / "app.env"]
         originals = [path.read_bytes() for path in paths]
+        previous_hosts = [
+            line.split("=", 1)[1].strip()
+            for line in originals[0].decode().splitlines()
+            if line.startswith("PUBLIC_HOST=")
+        ]
+        if len(previous_hosts) != 1:
+            raise RuntimeError("The existing public host must be unambiguous")
+        previous_host = hostname(
+            json.loads(previous_hosts[0])
+            if previous_hosts[0].startswith('"')
+            else previous_hosts[0]
+        )
         updated = [
             replace_values(
                 originals[0],
@@ -263,7 +275,10 @@ def configure(root, host, aliases, default_sni, expected_release):
                 atomic_write(path, content)
             try:
                 apply()
-            except (RuntimeError, OSError, subprocess.SubprocessError):
+                # Compose's static web check cannot prove that its API proxy
+                # reaches the replacement container. Check the old public path.
+                verify(previous_host, [], default_sni, expected_release)
+            except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
                 raise RuntimeError(
                     f"Domain setup failed; configuration restored but service recovery needs attention. Backup: {backup}"
                 ) from error

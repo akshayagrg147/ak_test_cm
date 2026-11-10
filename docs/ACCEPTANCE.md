@@ -1166,3 +1166,9 @@ Domain activation and rollback now force recreation of all four application/
 proxy services. The 28 deployment tests and 11 Python 3.9 host tests pass with
 explicit regression assertions for forced web recreation on both paths. A
 passing static web healthcheck alone is not treated as public API readiness.
+Rollback now also verifies the previous public API and release before claiming
+restoration; a new regression rejects a successful container check with a still
+failing public API (**29 deployment tests / 12 host tests**). The manual proxy
+recovery workflow is limited to recreating the current `web` container under the
+same locks and verifying its public API/release; its YAML, Python syntax and
+isolated remote-command execution were checked before use.

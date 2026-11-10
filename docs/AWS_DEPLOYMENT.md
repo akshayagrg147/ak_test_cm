@@ -95,6 +95,14 @@ container address at startup; leaving the old web container running after an
 API replacement can produce 502 responses even when internal API health and the
 static web healthcheck pass.
 
+For an already affected current release, the manual **Recover ViaCRM web proxy**
+workflow recreates only `web` with `--no-deps`, then verifies public HTTPS API
+health and the current release. It uses the same main-only role, production
+concurrency group and host deployment lock; it does not restart the API or alter
+environment files, database records or volumes. Do not overlap recovery with an
+active SSM deployment. Domain rollback also verifies the restored public API
+before reporting service recovery.
+
 Set these non-secret values in `/opt/viacrm/shared/host.env`:
 
 ```dotenv

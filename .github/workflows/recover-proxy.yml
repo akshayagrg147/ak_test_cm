@@ -1,0 +1,133 @@
+name: Recover ViaCRM web proxy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-proxy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: viacrm-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-south-1
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require the current main commit
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$head" = "$GITHUB_SHA"
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+          role-session-name: viacrm-proxy-${{ github.run_id }}
+      - name: Recreate only the current web proxy and verify HTTPS
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          import time
+          sys.path.insert(0, 'scripts/deploy')
+          from dispatch_domain import aws
+
+          instance = os.environ['EC2_INSTANCE_ID']
+          if not re.fullmatch(r'i-[0-9a-f]+', instance):
+              raise ValueError('Invalid production instance')
+          remote = r"""set -eu
+          python3 - <<'HOST'
+          import fcntl
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+          import time
+          import urllib.request
+
+          root = pathlib.Path('/opt/viacrm')
+          with (root / 'shared/deploy.lock').open('a') as lock:
+              fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+              release = (root / 'current').resolve(strict=True)
+              sha = release.name
+              if release.parent != root / 'releases' or not re.fullmatch(r'[0-9a-f]{40}', sha):
+                  raise RuntimeError('Invalid current release')
+              if 'RELEASE_SHA=' + sha not in (release / 'images.env').read_text().splitlines():
+                  raise RuntimeError('Current release manifest mismatch')
+              overrides = {'PUBLIC_HOST', 'PUBLIC_ALIASES', 'TLS_DEFAULT_SNI', 'RELEASE_SHA',
+                           'API_IMAGE', 'WEB_IMAGE', 'CADDY_IMAGE', 'POSTGRES_IMAGE'}
+              environment = {key: value for key, value in os.environ.items() if key not in overrides}
+              environment['DEPLOY_ROOT'] = str(root)
+              command = ['docker', 'compose', '--project-name', 'viacrm',
+                         '--env-file', str(root / 'shared/host.env'),
+                         '--env-file', str(release / 'images.env'), '-f', str(release / 'compose.yaml'),
+                         'up', '-d', '--no-deps', '--force-recreate', '--wait', '--wait-timeout', '90', 'web']
+              result = subprocess.run(command, env=environment, capture_output=True, timeout=120, check=False)
+              if result.returncode:
+                  raise RuntimeError('Current web proxy recreation failed')
+              deadline = time.monotonic() + 60
+              while True:
+                  try:
+                      with urllib.request.urlopen('https://13.234.72.21/api/health', timeout=8) as response:
+                          health = json.load(response)
+                      with urllib.request.urlopen('https://13.234.72.21/release.json', timeout=8) as response:
+                          current = json.load(response)
+                      if not all(health.get(key) == 'ok' for key in ('status', 'database', 'worker')):
+                          raise RuntimeError('Application health is not ready')
+                      if current.get('commit') != sha:
+                          raise RuntimeError('Public release does not match the current release')
+                      print('Trusted HTTPS, database, worker and current release ' + sha + ' verified')
+                      break
+                  except (OSError, ValueError, RuntimeError):
+                      if time.monotonic() >= deadline:
+                          raise RuntimeError('Public HTTPS health checks did not pass') from None
+                      time.sleep(3)
+          HOST
+          """
+          response = aws('ssm', 'send-command', '--instance-ids', instance,
+                         '--document-name', 'AWS-RunShellScript', '--timeout-seconds', '600',
+                         '--comment', 'ViaCRM recreate current web proxy only', '--parameters',
+                         json.dumps({'commands': [remote], 'executionTimeout': ['240']}))
+          command_id = response['Command']['CommandId']
+          print('SSM command: ' + command_id, flush=True)
+          deadline = time.monotonic() + 8 * 60
+          while time.monotonic() < deadline:
+              time.sleep(min(5, max(0, deadline - time.monotonic())))
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  break
+              result = subprocess.run(
+                  ['aws', 'ssm', 'get-command-invocation', '--command-id', command_id,
+                   '--instance-id', instance, '--output', 'json', '--no-cli-pager',
+                   '--cli-connect-timeout', '10', '--cli-read-timeout', '20'],
+                  env={**os.environ, 'AWS_MAX_ATTEMPTS': '1'}, capture_output=True,
+                  text=True, check=False, timeout=min(30, remaining))
+              if result.returncode:
+                  if 'InvocationDoesNotExist' in result.stderr:
+                      continue
+                  raise RuntimeError('Cannot read SSM result; inspect this command before retrying')
+              invocation = json.loads(result.stdout)
+              if invocation['Status'] in {'Pending', 'InProgress', 'Delayed'}:
+                  continue
+              if invocation['Status'] != 'Success':
+                  raise RuntimeError('Web proxy recovery failed: ' + invocation['Status'])
+              print(invocation.get('StandardOutputContent', ''))
+              break
+          else:
+              raise TimeoutError('Inspect the SSM command before retrying web proxy recovery')
+          if time.monotonic() >= deadline:
+              raise TimeoutError('Inspect the SSM command before retrying web proxy recovery')
+          PY

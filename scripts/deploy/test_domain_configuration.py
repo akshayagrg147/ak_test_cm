@@ -193,7 +193,7 @@ class DomainConfiguration(unittest.TestCase):
     def test_readiness_failure_restores_previous_configuration_without_secret_output(
         self,
     ):
-        self.verify.side_effect = RuntimeError("not ready")
+        self.verify.side_effect = [RuntimeError("not ready"), None]
         with (
             patch.object(DOMAIN.time, "monotonic", side_effect=[100, 341]),
             self.assertRaisesRegex(
@@ -202,6 +202,7 @@ class DomainConfiguration(unittest.TestCase):
         ):
             self.configure()
         self.assert_originals()
+        self.assertEqual(self.verify.call_args.args, (IP, [], IP, SHA))
         self.assertEqual(
             sum("up" in call.args[0] for call in self.runner.call_args_list), 2
         )
@@ -217,6 +218,17 @@ class DomainConfiguration(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "service recovery needs attention"):
             self.configure()
         self.assert_originals()
+
+    def test_rollback_public_api_failure_does_not_claim_restoration(self):
+        self.runner.side_effect = [
+            SimpleNamespace(returncode=1),
+            SimpleNamespace(returncode=0),
+        ]
+        self.verify.side_effect = RuntimeError("Public API still returns 502")
+        with self.assertRaisesRegex(RuntimeError, "service recovery needs attention"):
+            self.configure()
+        self.assert_originals()
+        self.verify.assert_called_once_with(IP, [], IP, SHA)
 
     def assert_originals(self):
         for name, content in self.before.items():

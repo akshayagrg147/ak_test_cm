@@ -6,7 +6,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstra
 
 Role = Literal["admin", "manager", "telecaller", "field_executive"]
 Status = Literal["new", "follow-up", "not-picked", "converted", "lost"]
-Source = Literal["manual", "website", "referral", "indiamart", "justdial", "tradeindia", "99acres", "magicbricks", "housing", "walk-in", "property-expo", "broker"]
+Source = Literal["manual", "website", "referral", "indiamart", "justdial", "tradeindia", "99acres", "magicbricks", "housing", "walk-in", "property-expo", "broker", "google-ads"]
 
 
 class Payload(BaseModel):

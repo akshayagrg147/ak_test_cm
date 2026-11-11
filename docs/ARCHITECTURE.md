@@ -14,6 +14,8 @@ Private file bytes live outside the web root under server-generated UUID keys. D
 | Create/edit/deactivate company admin logins; company branding | Yes, explicit company-scoped routes | Own company through existing team/profile routes | No | No |
 | Payment methods/plans and payment approval | Yes; cash approval requires receipt confirmation | Submit own company UPI/cash requests only | No | No |
 | Getting-started progress (`/api/onboarding`, read-only counts) | Support workspace | Own company | No | No |
+| Lead capture settings, keys and form link (`/api/lead-capture`) | Support workspace | Own company; keys shown once | No | No |
+| Captured enquiry intake (`/api/capture/{org}/website`, `/google-ads`, `/api/public/enquiry/{form}`) | Unauthenticated; per-company key, or enabled same-origin form with consent, honeypot and 30 per 10 minutes limit | — | — | — |
 | Read organization data directly | Explicit audited support only | Entire organization | Operational organization data | Currently assigned leads and own private work |
 | Create/import leads | Support workspace | Unassigned | Unassigned | Assigned to self; forged owner fields rejected |
 | Assign/distribute | Support workspace | Yes | Yes | Own lead → active same-org manager only |

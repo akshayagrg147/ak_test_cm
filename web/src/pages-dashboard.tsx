@@ -49,6 +49,67 @@ const periodLabels: Record<number, string> = {
   30: "Last 30 days",
 };
 
+function minutesText(value: number) {
+  if (value < 1) return "under 1 min";
+  if (value < 60) return `${Math.round(value)} min`;
+  const hours = value / 60;
+  return hours < 24
+    ? `${hours.toFixed(1).replace(/\.0$/, "")} hr`
+    : `${(hours / 24).toFixed(1).replace(/\.0$/, "")} days`;
+}
+
+/** How fast captured enquiries got a first call attempt or logged outcome in the period. */
+function SpeedToLead({
+  speed,
+  period,
+  admin,
+}: {
+  speed: NonNullable<DashboardData["speed_to_lead"]>;
+  period: string;
+  admin: boolean;
+}) {
+  return (
+    <section className="crm-speed" aria-labelledby="speed-to-lead-title">
+      <div>
+        <h2 id="speed-to-lead-title">Speed to lead</h2>
+        <p>
+          {period}. Captured enquiries from your website, ads and portals, and
+          how fast someone first called or logged an outcome.
+        </p>
+      </div>
+      {speed.captured ? (
+        <dl>
+          <div>
+            <dt>Median first response</dt>
+            <dd>
+              {speed.median_minutes === null
+                ? "No responses yet"
+                : minutesText(speed.median_minutes)}
+            </dd>
+          </div>
+          <div>
+            <dt>Within {speed.target_minutes} minutes</dt>
+            <dd>
+              {speed.within_target} of {speed.captured}
+            </dd>
+          </div>
+          <div>
+            <dt>Still waiting for a call</dt>
+            <dd className={speed.awaiting ? "attention" : ""}>
+              {speed.awaiting}
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="crm-speed-empty">
+          No captured enquiries in this period.{" "}
+          {admin && <Link to="/app/integrations">Set up lead capture</Link>}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function DashboardPage() {
   const { session } = useAuth();
   const [days, setDays] = useState(7);
@@ -218,6 +279,14 @@ export function DashboardPage() {
                 Review priority clients <ArrowRight size={17} />
               </a>
             </section>
+            {data.speed_to_lead &&
+              (data.speed_to_lead.captured > 0 || !personal) && (
+                <SpeedToLead
+                  speed={data.speed_to_lead}
+                  period={periodLabels[days]}
+                  admin={session?.role === "admin"}
+                />
+              )}
             <div className="crm-insight-grid">
               <Panel
                 className="crm-trend-panel"

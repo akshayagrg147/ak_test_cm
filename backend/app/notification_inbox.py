@@ -5,7 +5,7 @@ from math import ceil
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import and_, case, false, func, literal, select, union_all
+from sqlalchemy import and_, case, false, func, literal, or_, select, union_all
 from sqlalchemy.orm import Session
 
 from .common import rows, visible_lead_ids
@@ -16,6 +16,7 @@ from .models import Definition, FieldHandoff, Lead, Task, User
 from .security import current, workspace
 
 router = APIRouter(prefix="/api/notifications", tags=["Alerts & reminders"])
+ENQUIRY_ALERT_WINDOW = timedelta(days=7)
 
 
 def columns(identifier, kind, title, description, url, due_at, priority, lead_id, owner_id):
@@ -55,8 +56,32 @@ def inbox_query(db, ctx, stamp):
             Lead.owner_id,
         )
     )
+    recent_enquiry = and_(
+        Lead.enquiry_at.is_not(None),
+        Lead.enquiry_at > stamp - ENQUIRY_ALERT_WINDOW,
+        Lead.enquiry_at <= stamp,
+        or_(Lead.first_response_at.is_(None), Lead.first_response_at < Lead.enquiry_at),
+        or_(Lead.last_contact.is_(None), Lead.last_contact < Lead.enquiry_at),
+    )
+    # Speed to lead: a captured enquiry stays at the top of the bell until someone calls or logs an outcome.
+    enquiries = eligible.where(recent_enquiry, or_(Lead.follow_up.is_(None), Lead.follow_up > stamp)).with_only_columns(
+        *columns(
+            literal("enquiry-") + Lead.id,
+            literal("new_enquiry"),
+            literal("New enquiry — call now"),
+            Lead.name,
+            literal("/app/leads/") + Lead.id,
+            Lead.enquiry_at,
+            literal(0),
+            Lead.id,
+            Lead.owner_id,
+        )
+    )
     first_contact = eligible.where(
-        Lead.follow_up.is_(None), Lead.last_contact.is_(None), Lead.created_at <= stamp - timedelta(hours=48)
+        Lead.follow_up.is_(None),
+        Lead.last_contact.is_(None),
+        Lead.created_at <= stamp - timedelta(hours=48),
+        ~recent_enquiry,
     ).with_only_columns(
         *columns(
             literal("first-") + Lead.id,
@@ -131,7 +156,7 @@ def inbox_query(db, ctx, stamp):
             )
         )
     )
-    return union_all(callbacks, tasks, handoffs, first_contact).subquery()
+    return union_all(callbacks, tasks, handoffs, enquiries, first_contact).subquery()
 
 
 @router.get("/inbox")

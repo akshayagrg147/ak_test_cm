@@ -468,6 +468,8 @@ def outcome(lead_id: str, data: OutcomeIn, ctx=Depends(current), db: Session = D
         assign(db, ctx, lead, manager.id, "lost_handoff")
     previous = lead.status
     lead.status, lead.last_contact = data.outcome, now()
+    if lead.first_response_at is None:
+        lead.first_response_at = lead.last_contact
     lead.follow_up = data.follow_up if data.outcome == "follow-up" else None
     if data.outcome in ["converted", "lost"]:
         lead.stage = "won" if data.outcome == "converted" else "lost"

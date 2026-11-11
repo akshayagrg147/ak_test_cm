@@ -1213,3 +1213,54 @@ state to real API responses with route interception, because expired trials and
 unconfigured global payment settings cannot be created safely through the API.
 The backend tests cover those states against the database. Android source, APK
 and call-sync contracts are unchanged.
+
+## Broker lead capture, stage 1 — 11 November 2026
+
+The owner chose brokers and agencies as the first segment and approved stage 1
+of automatic lead capture:
+
+- **Hosted enquiry form**: an admin turns on a per-company link
+  (`/enquiry/<form id>`) that clients open without signing in. It is
+  same-origin, needs explicit consent, ignores a hidden honeypot field, accepts
+  at most 30 enquiries per company per 10 minutes and treats an immediate
+  resend as one enquiry. **Replace link** stops the old link.
+- **Website integration**: `POST /api/capture/{org}/website` with a
+  per-company key in `X-Webhook-Token`; one JSON enquiry or up to 100.
+- **Google Ads lead form**: `POST /api/capture/{org}/google-ads` verifies
+  `google_key` from the body, maps `user_column_data` and records Google's
+  `is_test` deliveries as "test received" without creating a lead.
+- Keys are generated server-side, encrypted at rest, shown once and revocable.
+  Delivery ids prevent duplicate retries. A repeat enquiry from an existing
+  phone appends to that lead's notes and refreshes its enquiry time.
+- Optional round-robin auto-assignment to active telecallers (audited with
+  `auto_capture`, no actor). Migration 0010 adds `leads.enquiry_at` and
+  `leads.first_response_at`; its downgrade refuses to drop recorded values.
+- The bell shows **New enquiry — call now** to people who can see the lead
+  until a first call attempt or an answered call/outcome after the enquiry.
+  These leads are not also shown as 48-hour first-contact reminders.
+- Home shows **Speed to lead** (median first response, number within 15
+  minutes, number still waiting). The setup checklist gained **Start capturing
+  enquiries**. IndiaMART/Justdial imports now also record the enquiry time.
+- A public-form defect found in testing: the app clears cached queries when no
+  one is signed in, which emptied the form's data mid-load. Public queries now
+  use the reserved `public` key.
+
+| Check | Executed result |
+| --- | --- |
+| Backend Ruff | Passed |
+| Backend pytest (dedicated `_test` database) | **301 passed** (7 new capture tests; onboarding test extended) |
+| Web lint and production build | Passed |
+| Browser suite `scripts/test_browser.py --production` | **90 passed** (2 new: admin setup with webhook delivery, auto-assignment and telecaller alert; public form at 390 px with consent, axe checks and speed to lead) |
+| Deployment unit tests | 29 passed |
+
+`test_backfill_repairs_already_converted_companies…` previously created a lead
+through the API after downgrading to 0004. The ORM now includes 0010 columns,
+so the test creates that lead before the downgrade; the backfill assertions
+are unchanged. A parallel run of pytest with the browser suite briefly exhausted
+the shared local PostgreSQL server; the recorded results are from separate runs.
+
+Not verified: real Google Ads delivery (needs the owner's Google Ads account and
+"Send test data" after deployment), and 99acres, MagicBricks, Housing.com and
+Meta lead ads, which are not implemented in this stage. Android source, APK and
+call-sync contracts are unchanged; device contacts still return only id, name,
+phone and dnd.

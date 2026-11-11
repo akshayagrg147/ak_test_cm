@@ -108,6 +108,13 @@ def sync(data: PhoneSyncIn, ctx=Depends(current), db: Session = Depends(get_db, 
         receipt.update(call_id=call.id, lead_id=call.lead_id, recording_state=call.recording_state)
         lead = matches[0]
         if (
+            lead.first_response_at is None
+            and entry.started_at >= lead.created_at
+            and (entry.direction == "outgoing" or entry.result == "answered")
+        ):
+            # Any outgoing attempt counts as responding; the client may not pick up.
+            lead.first_response_at = entry.started_at
+        if (
             entry.result == "answered"
             and entry.duration > 0
             and (not lead.last_contact or entry.started_at > lead.last_contact)

@@ -93,6 +93,7 @@ import { LeadDetail, LeadsPage } from "./pages-leads";
 import { FieldWorkPage } from "./pages-field";
 import { DashboardPage } from "./pages-dashboard";
 import { CallbackAlerts } from "./callback-alerts";
+import { EnquiryPage } from "./lead-capture";
 import { HourlyCallChart } from "./hourly-call-chart";
 import {
   AttendancePage,
@@ -1844,6 +1845,7 @@ function App() {
           <Routes>
             <Route path="/" element={<PublicSite />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/enquiry/:formId" element={<EnquiryPage />} />
             <Route
               path="/app"
               element={

@@ -49,6 +49,12 @@ def test_onboarding_reports_real_setup_progress_and_is_admin_only(env):
     assert data["telecallers"] == 2
     assert data["members"] == 4
     assert data["leads"] == 0 and data["properties"] == 0
+    assert data["capture"] is False
+    assert c["admin"].put("/api/lead-capture", json={"form_enabled": True}).status_code == 200
+    assert c["admin"].get("/api/onboarding").json()["capture"] is True
+    c["admin"].put("/api/lead-capture", json={"form_enabled": False})
+    c["admin"].post("/api/lead-capture/google-ads/key")
+    assert c["admin"].get("/api/onboarding").json()["capture"] is True
     assert data["subscription"] is None
     assert data["payments"] == {"plans": 0, "upi_ready": False, "cod_ready": False, "ready": False}
 

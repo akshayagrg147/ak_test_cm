@@ -101,7 +101,7 @@ test("new company admin sees a live setup checklist, trial countdown and an hone
       name: "Get your workspace ready",
     });
     await expect(checklist).toBeVisible();
-    await expect(checklist).toContainText("0 of 5 steps complete");
+    await expect(checklist).toContainText("0 of 6 steps complete");
     await expect(checklist.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
       "0",
@@ -156,7 +156,7 @@ test("new company admin sees a live setup checklist, trial countdown and an hone
     ).toHaveCount(0);
 
     await page.goto("/app/overview");
-    await expect(checklist).toContainText("2 of 5 steps complete");
+    await expect(checklist).toContainText("2 of 6 steps complete");
     await expect(checklist).toContainText("Add a telecaller (done)");
     await expect(checklist).toContainText("1 active telecaller can receive");
     await expect(checklist).toContainText("Add or import leads (done)");

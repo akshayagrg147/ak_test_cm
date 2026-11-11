@@ -149,6 +149,7 @@ def ingest(db, integration, records):
         if existing:
             result["duplicates"] += 1
             lead = existing
+            lead.enquiry_at = now()
         else:
             lead = Lead(
                 org_id=integration.org_id,
@@ -158,6 +159,7 @@ def ingest(db, integration, records):
                 city=str(item.get("SENDER_CITY") or item.get("city") or "")[:100],
                 state=str(item.get("SENDER_STATE") or item.get("state") or "")[:100],
                 notes=str(item.get("QUERY_MESSAGE") or item.get("enquiry") or item.get("message") or "")[:10000],
+                enquiry_at=now(),
             )
             db.add(lead)
             db.flush()

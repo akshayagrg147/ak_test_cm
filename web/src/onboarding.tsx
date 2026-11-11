@@ -176,6 +176,16 @@ export function SetupChecklist({ realEstate }: { realEstate: boolean }) {
       cta: "Go to leads",
     },
     {
+      key: "capture",
+      done: d.capture,
+      title: "Start capturing enquiries",
+      detail: d.capture
+        ? "New enquiries arrive automatically and alert your team."
+        : "Turn on your enquiry form link or connect your website or Google Ads.",
+      to: "/app/integrations",
+      cta: "Set up lead capture",
+    },
+    {
       key: "plan",
       done: subscribed,
       title: "Choose a subscription plan",

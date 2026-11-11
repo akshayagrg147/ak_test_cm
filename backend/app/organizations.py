@@ -90,6 +90,7 @@ def onboarding(ctx=Depends(current), db: Session = Depends(get_db, scope="functi
     workspace(ctx)
     roles(ctx, "admin")
     from .billing import payments_ready, subscription_dump
+    from .lead_capture import capture_ready
 
     def count(cls, *where):
         return db.scalar(select(func.count()).select_from(cls).where(cls.org_id == ctx.org_id, *where))
@@ -100,6 +101,7 @@ def onboarding(ctx=Depends(current), db: Session = Depends(get_db, scope="functi
         "members": count(User, User.active.is_(True), User.deleted.is_(False)),
         "properties": count(Property, Property.archived.is_(False)),
         "leads": count(Lead, Lead.deleted.is_(False)),
+        "capture": capture_ready(db, ctx.org),
         "subscription": subscription_dump(db, ctx.org_id),
         "payments": payments_ready(db),
     }

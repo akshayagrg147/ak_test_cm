@@ -208,6 +208,36 @@ The Property brief separately records detailed requirements and can include mult
 property types. Healthcare qualification fields remain disabled in real estate
 companies, including after a workspace-settings save.
 
+### Capturing enquiries automatically
+
+Company admins open **Studio → Connections → Lead capture**:
+
+- **Enquiry form link** — turn it on and share the link on your website,
+  social profiles, ads or messages. Clients enter name, mobile, optional
+  email/city, what they want (buy, rent, sell, invest), budget and a message,
+  and must agree to be contacted. **Replace link** stops the old link at once.
+- **Website integration** — for a developer, landing-page builder or
+  Zapier/Make. Send JSON with at least `name` and `phone` to the shown URL with
+  the key in the `X-Webhook-Token` header. Email, city, budget, project,
+  message and other fields are kept in the lead notes. Send a stable `id` so
+  retries are not duplicated.
+- **Google Ads lead form** — in the lead form's webhook settings paste the URL
+  and key, then use **Send test data**. Test data shows as "test received" in
+  the history and does not create a lead.
+
+Keys are shown once; **Generate new key** replaces the old key immediately.
+A repeat enquiry from a phone number that already exists is added to that
+lead's notes instead of creating a duplicate. **Assign new enquiries
+automatically** round-robins new unassigned enquiries across active
+telecallers. Every captured enquiry shows **New enquiry — call now** in the
+bell for people who can see the lead until someone calls (an unanswered
+outgoing call counts as a response for a new lead) or logs an outcome. Home
+shows **Speed to lead**: median first response, how many were contacted within
+15 minutes and how many are still waiting.
+
+99acres, MagicBricks, Housing.com and Facebook/Instagram lead ads are not
+connected yet; leads from them still need adding or importing.
+
 ### Finding leads without losing track of filters
 
 In **Sales → Leads**, start with **Find a lead**, **Lead status**, **Lead source**

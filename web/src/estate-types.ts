@@ -131,6 +131,7 @@ export interface OnboardingData {
   members: number;
   properties: number;
   leads: number;
+  capture: boolean;
   subscription: Subscription | null;
   payments: PaymentReadiness;
 }

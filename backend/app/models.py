@@ -75,7 +75,14 @@ class Lead(Scoped, Base):
     lost_reason: Mapped[str] = mapped_column(Text, default="")
     reported_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     deleted: Mapped[bool] = mapped_column(default=False)
-    __table_args__ = (Index("ix_lead_org_phone", "org_id", "phone"),)
+    # Latest enquiry received through a capture channel (website, Google Ads, portals).
+    enquiry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # First call attempt or logged outcome after the lead was created.
+    first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    __table_args__ = (
+        Index("ix_lead_org_phone", "org_id", "phone"),
+        Index("ix_lead_org_enquiry", "org_id", "enquiry_at"),
+    )
 
 
 class Assignment(Scoped, Base):

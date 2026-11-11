@@ -349,6 +349,14 @@ export interface DashboardData extends Analytics {
     needs_first_contact: number;
   };
   trend: { key: string; label: string; leads: number; calls: number }[];
+  speed_to_lead?: {
+    captured: number;
+    responded: number;
+    awaiting: number;
+    median_minutes: number | null;
+    within_target: number;
+    target_minutes: number;
+  };
   pipeline: { key: string; label: string; count: number }[];
   call_results: Record<string, number>;
   priority: { lead: Lead; reason: "overdue" | "due_today" | "first_contact" }[];

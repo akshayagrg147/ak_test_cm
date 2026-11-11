@@ -18,6 +18,7 @@ import {
 import { api, download, params, send, setSession } from "./api";
 import { PrivateLogo, useAction, useAuth, useData, useDirectory } from "./main";
 import { CompanyProfilePanel } from "./pages-billing";
+import { LeadCapturePanel } from "./lead-capture";
 import type {
   Audit,
   Automation,
@@ -1059,6 +1060,7 @@ export function IntegrationsPage() {
         title="Integrations"
         description="Real adapters, clear setup and visible delivery history."
       />
+      {session?.role === "admin" && <LeadCapturePanel />}
       {error !== null && <ErrorBox error={error} />}
       <Load query={q}>
         {(data) => (

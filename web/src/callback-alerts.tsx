@@ -7,6 +7,7 @@ import {
   RefreshCw,
   UserRound,
   X,
+  PhoneIncoming,
 } from "lucide-react";
 import { useData } from "./main";
 import { ErrorBox, Load } from "./ui";
@@ -14,7 +15,7 @@ import "./callback-alerts.css";
 
 interface AlertItem {
   id: string;
-  kind: "callback" | "task" | "handoff" | "first_contact";
+  kind: "callback" | "task" | "handoff" | "first_contact" | "new_enquiry";
   title: string;
   description: string;
   owner_name: string;
@@ -217,15 +218,20 @@ export function CallbackAlerts() {
                         const Icon =
                           item.kind === "callback"
                             ? PhoneCall
-                            : item.kind === "first_contact"
-                              ? UserRound
-                              : CalendarClock;
+                            : item.kind === "new_enquiry"
+                              ? PhoneIncoming
+                              : item.kind === "first_contact"
+                                ? UserRound
+                                : CalendarClock;
                         return (
                           <Link
                             key={item.id}
                             to={item.url}
                             className={
-                              item.kind === "callback" ? "overdue" : ""
+                              item.kind === "callback" ||
+                              item.kind === "new_enquiry"
+                                ? "overdue"
+                                : ""
                             }
                             onClick={() => setOpen(false)}
                           >
@@ -246,9 +252,11 @@ export function CallbackAlerts() {
                               <small>
                                 {item.kind === "handoff"
                                   ? "Added "
-                                  : item.kind === "first_contact"
-                                    ? "Awaiting contact since "
-                                    : "Due "}
+                                  : item.kind === "new_enquiry"
+                                    ? "Enquired "
+                                    : item.kind === "first_contact"
+                                      ? "Awaiting contact since "
+                                      : "Due "}
                                 {new Intl.DateTimeFormat("en-IN", {
                                   dateStyle: "medium",
                                   timeStyle: "short",

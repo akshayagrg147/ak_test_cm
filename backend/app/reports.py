@@ -15,6 +15,29 @@ from .security import current, fail, workspace
 router = APIRouter(prefix="/api", tags=["Reports & notifications"])
 
 
+RESPONSE_TARGET_MINUTES = 15
+
+
+def speed_to_lead(leads):
+    """How quickly captured enquiries created in the period received a first call attempt or outcome."""
+    captured = [r for r in leads if r.enquiry_at is not None]
+    waits = sorted(
+        (r.first_response_at - r.created_at).total_seconds() / 60
+        for r in captured
+        if r.first_response_at is not None and r.first_response_at >= r.created_at
+    )
+    middle = len(waits) // 2
+    median = (waits[middle] if len(waits) % 2 else (waits[middle - 1] + waits[middle]) / 2) if waits else None
+    return {
+        "captured": len(captured),
+        "responded": len(waits),
+        "awaiting": len(captured) - len(waits),
+        "median_minutes": round(median, 1) if median is not None else None,
+        "within_target": sum(wait <= RESPONSE_TARGET_MINUTES for wait in waits),
+        "target_minutes": RESPONSE_TARGET_MINUTES,
+    }
+
+
 def analytics_data(db, ctx, from_date=None, to_date=None, owner_id=None, *, dashboard_days=None):
     workspace(ctx)
     end = to_date or now()
@@ -106,6 +129,7 @@ def analytics_data(db, ctx, from_date=None, to_date=None, owner_id=None, *, dash
             "upcoming": sum(r.follow_up is not None and r.follow_up >= now() for r in all_leads),
             "stale": sum(r.created_at < now() - timedelta(hours=48) and r.last_contact is None for r in all_leads),
         },
+        "speed_to_lead": speed_to_lead(leads),
         "statuses": dict(Counter(r.status for r in leads)),
         "sources": dict(Counter(r.source for r in leads)),
         "outcomes": dict(Counter(r.outcome for r in manuals)),

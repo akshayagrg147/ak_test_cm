@@ -94,8 +94,10 @@ def test_real_estate_settings_cannot_restore_pharma_qualification_fields(env):
 
 def test_backfill_repairs_already_converted_companies_without_touching_custom_or_general_data(env):
     clients, ids = env
-    command.downgrade(Config("alembic.ini"), "0004")
+    # Create the lead through the current API before rolling the schema back; the ORM
+    # model includes later lead columns, but the row itself survives the downgrade.
     old = make_lead(clients["admin"], category="ayurvedic", notes="Do not rewrite me")
+    command.downgrade(Config("alembic.ini"), "0004")
     with SessionLocal.begin() as db:
         org = db.get(Organization, ids["org"])
         org.settings = {**org.settings, "industry": "real_estate", "pharma_enabled": True}

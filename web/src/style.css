@@ -5687,7 +5687,7 @@ th {
 }
 .qr-placeholder {
   text-align: center;
-  color: #738096;
+  color: var(--muted);
   padding: 18px;
 }
 .qr-placeholder strong {

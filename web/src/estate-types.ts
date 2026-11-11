@@ -116,6 +116,23 @@ export interface Subscription {
   effective_status: string;
   starts_on: string;
   ends_on: string;
+  /** Whole days until ends_on in the platform's India time zone; negative once ended. */
+  days_left: number;
+}
+export interface PaymentReadiness {
+  plans: number;
+  upi_ready: boolean;
+  cod_ready: boolean;
+  ready: boolean;
+}
+export interface OnboardingData {
+  profile: { filled: number; total: number; missing: string[] };
+  telecallers: number;
+  members: number;
+  properties: number;
+  leads: number;
+  subscription: Subscription | null;
+  payments: PaymentReadiness;
 }
 export interface Payment {
   id: string;

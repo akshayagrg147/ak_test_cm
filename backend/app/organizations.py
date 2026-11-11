@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .auth import session_result, set_cookie
 from .common import audit, dump, get_scoped, init_org, member, mutate, rows
 from .db import get_db, now
-from .models import AuthSession, Lead, Organization, User
+from .models import AuthSession, Lead, Organization, Property, User
 from .schemas import CompanyAdminPatch, CompanyProfile, MemberIn, MemberPatch, OrganizationIn, OrganizationPatch
 from .security import (
     Context,
@@ -44,12 +44,64 @@ def platform(ctx=Depends(current), db: Session = Depends(get_db, scope="function
             select(func.count()).select_from(Lead).where(Lead.org_id == org.id, Lead.deleted.is_(False))
         )
         result.append(item)
+    from .billing import payments_ready
+
+    def ending_soon(item):
+        sub = item["subscription"]
+        return bool(
+            sub and sub["effective_status"] in {"trial", "active"} and 0 <= sub["days_left"] <= ENDING_SOON_DAYS
+        )
+
     return {
         "organizations": result,
         "total": len(orgs),
         "active": sum(o.active for o in orgs),
         "users": sum(o["users"] for o in result),
         "leads": sum(o["leads"] for o in result),
+        "ending_soon": sum(ending_soon(o) for o in result),
+        "expired": sum(bool(o["subscription"] and o["subscription"]["effective_status"] == "expired") for o in result),
+        "payments": payments_ready(db),
+    }
+
+
+ENDING_SOON_DAYS = 7
+PROFILE_FIELDS = (
+    "contact_name",
+    "email",
+    "phone",
+    "city",
+    "state",
+    "address",
+    "website",
+    "rera_number",
+    "gst_number",
+)
+
+
+def profile_progress(org):
+    profile = org.settings.get("company_profile") or {}
+    missing = [name for name in PROFILE_FIELDS if not str(profile.get(name) or "").strip()]
+    return {"filled": len(PROFILE_FIELDS) - len(missing), "total": len(PROFILE_FIELDS), "missing": missing}
+
+
+@router.get("/onboarding")
+def onboarding(ctx=Depends(current), db: Session = Depends(get_db, scope="function")):
+    """Read-only setup progress for a company administrator's getting-started checklist."""
+    workspace(ctx)
+    roles(ctx, "admin")
+    from .billing import payments_ready, subscription_dump
+
+    def count(cls, *where):
+        return db.scalar(select(func.count()).select_from(cls).where(cls.org_id == ctx.org_id, *where))
+
+    return {
+        "profile": profile_progress(ctx.org),
+        "telecallers": count(User, User.role == "telecaller", User.active.is_(True), User.deleted.is_(False)),
+        "members": count(User, User.active.is_(True), User.deleted.is_(False)),
+        "properties": count(Property, Property.archived.is_(False)),
+        "leads": count(Lead, Lead.deleted.is_(False)),
+        "subscription": subscription_dump(db, ctx.org_id),
+        "payments": payments_ready(db),
     }
 
 

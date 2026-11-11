@@ -72,6 +72,7 @@ def subscription_dump(db, org_id):
     return {
         **dump(item),
         "effective_status": "expired" if item.ends_on < today() and item.status in {"trial", "active"} else item.status,
+        "days_left": (item.ends_on - today()).days,
         "used_seats": active_seats(db, org_id),
     }
 
@@ -86,6 +87,19 @@ def billing_config(db):
         "upi_enabled": item.upi_enabled if item else True,
         "cod_enabled": item.cod_enabled if item else False,
         "cod_instructions": item.cod_instructions if item else "",
+    }
+
+
+def payments_ready(db):
+    """Whether a company can currently start a payment: a published plan and a usable method."""
+    config = billing_config(db)
+    plans = db.scalar(select(func.count()).select_from(SubscriptionPlan).where(SubscriptionPlan.active.is_(True)))
+    upi = config["upi_enabled"] and config["qr_ready"]
+    return {
+        "plans": plans,
+        "upi_ready": upi,
+        "cod_ready": config["cod_enabled"],
+        "ready": bool(plans and (upi or config["cod_enabled"])),
     }
 
 

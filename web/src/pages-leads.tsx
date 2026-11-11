@@ -5,6 +5,7 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
+import "./onboarding.css";
 import {
   ArrowLeft,
   ArrowRight,
@@ -720,7 +721,21 @@ export function LeadsPage({ lost = false }: { lost?: boolean }) {
             + Save filters
           </button>
           {!["telecaller", "field_executive"].includes(session?.role || "") &&
-            !lost && (
+            !lost &&
+            (filterTeam.data &&
+            !filterTeam.data.some(
+              (member) => member.role === "telecaller" && member.active,
+            ) ? (
+              <span className="crm-distribute-hint">
+                <Users size={14} aria-hidden="true" /> No active telecallers to
+                distribute leads to.{" "}
+                {session?.role === "admin" ? (
+                  <Link to="/app/team">Add a telecaller</Link>
+                ) : (
+                  "Ask your administrator to add one."
+                )}
+              </span>
+            ) : (
               <button
                 className="text-button distribute-button"
                 onClick={() => setDialog("distribute")}
@@ -728,7 +743,7 @@ export function LeadsPage({ lost = false }: { lost?: boolean }) {
                 <Users size={14} />
                 Distribute unassigned
               </button>
-            )}
+            ))}
         </div>
         {error !== null && <ErrorBox error={error} />}
         {selected.length > 0 && (

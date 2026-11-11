@@ -40,8 +40,10 @@ app = FastAPI(
     title=f"{settings.brand_name} API",
     version="1.0.0",
     description="Organization-scoped CRM with assigned-customer Android call sync. WhatsApp is excluded.",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    # Interactive API documentation stays available for development and tests only.
+    docs_url=None if settings.environment == "production" else "/api/docs",
+    redoc_url=None,
+    openapi_url=None if settings.environment == "production" else "/api/openapi.json",
 )
 app.add_middleware(
     CORSMiddleware,

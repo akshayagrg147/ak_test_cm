@@ -13,6 +13,7 @@ Private file bytes live outside the web root under server-generated UUID keys. D
 | Create/suspend/archive organizations | Yes | No | No | No |
 | Create/edit/deactivate company admin logins; company branding | Yes, explicit company-scoped routes | Own company through existing team/profile routes | No | No |
 | Payment methods/plans and payment approval | Yes; cash approval requires receipt confirmation | Submit own company UPI/cash requests only | No | No |
+| Getting-started progress (`/api/onboarding`, read-only counts) | Support workspace | Own company | No | No |
 | Read organization data directly | Explicit audited support only | Entire organization | Operational organization data | Currently assigned leads and own private work |
 | Create/import leads | Support workspace | Unassigned | Unassigned | Assigned to self; forged owner fields rejected |
 | Assign/distribute | Support workspace | Yes | Yes | Own lead → active same-org manager only |

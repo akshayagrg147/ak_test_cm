@@ -1172,3 +1172,44 @@ failing public API (**29 deployment tests / 12 host tests**). The manual proxy
 recovery workflow is limited to recreating the current `web` container under the
 same locks and verifying its public API/release; its YAML, Python syntax and
 isolated remote-command execution were checked before use.
+
+## Customer onboarding and super-admin guidance — 11 November 2026
+
+The owner confirmed there are no real customers yet and approved seven
+customer-facing UI changes found during a read-only live review:
+
+1. Company administrators see a getting-started checklist on Home built from the
+   new read-only, admin-only `/api/onboarding` counts: company profile fields,
+   active telecallers, properties (real estate), leads and a paid plan. It hides
+   when every step is done.
+2. Trials and plans ending within 7 days or already ended show a countdown on
+   Home and the company subscription page. `days_left` is computed server-side
+   in India time.
+3. Leads hides "Distribute unassigned" when no active telecaller exists and
+   explains why, linking admins to Team.
+4. Super admin Companies lists subscriptions ending within 7 days and expired
+   ones, with a renewal hint per company.
+5. Payment readiness is honest: UPI shows "not ready" until a QR and payee
+   exist, and both platform pages warn when companies cannot pay (no active plan
+   or no usable method).
+6. Company rows and the Manage dialog show profile progress and missing fields.
+7. The owner sees a prompt to enable an authenticator until 2FA is on.
+   Interactive API documentation (`/api/docs`, `/api/openapi.json`, ReDoc) is
+   disabled when `ENVIRONMENT=production`; development and tests keep it.
+
+The existing QR placeholder text failed WCAG AA contrast (3.99:1) on the
+unconfigured Plans & payments page; it now uses the standard muted ink.
+
+| Check | Executed result |
+| --- | --- |
+| Backend Ruff | Passed |
+| Backend pytest (dedicated `_test` database) | **294 passed** (4 new: onboarding scope/progress, trial days/attention counts, payment readiness, production docs disabled) |
+| Web lint and production build | Passed |
+| Browser suite `scripts/test_browser.py --production` | **88 passed** (2 new onboarding journeys with axe checks and 390 px width) |
+| Deployment unit tests and `deploy.sh` syntax | 29 passed; syntax OK |
+
+The super-admin browser journey adds one expired company and an unready payment
+state to real API responses with route interception, because expired trials and
+unconfigured global payment settings cannot be created safely through the API.
+The backend tests cover those states against the database. Android source, APK
+and call-sync contracts are unchanged.

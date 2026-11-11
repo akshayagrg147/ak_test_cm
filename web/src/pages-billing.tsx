@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   Building2,
   Banknote,
   Check,
@@ -15,6 +16,14 @@ import {
 import { api, download, send, setSession } from "./api";
 import { PrivateLogo, useAction, useAuth, useData } from "./main";
 import { DistributionChart } from "./charts";
+import {
+  PaymentsNotReadyNotice,
+  TrialNotice,
+  TwoFactorNotice,
+  missingProfileText,
+  profileProgress,
+  subscriptionTiming,
+} from "./onboarding";
 import type { Session, User } from "./types";
 import type {
   BillingConfig,
@@ -22,6 +31,7 @@ import type {
   Company,
   CompanyProfile,
   Payment,
+  PaymentReadiness,
   Plan,
   Subscription,
 } from "./estate-types";
@@ -121,6 +131,9 @@ export function SuperAdminPage() {
     active: number;
     users: number;
     leads: number;
+    ending_soon: number;
+    expired: number;
+    payments: PaymentReadiness;
   }>("/platform");
   const [search, setSearch] = useState(""),
     [editing, setEditing] = useState<Company | true | null>(null),
@@ -153,9 +166,48 @@ export function SuperAdminPage() {
         }
       />
       {error !== null && <ErrorBox error={error} />}
+      <TwoFactorNotice />
       <Load query={q}>
         {(d) => (
           <>
+            {d.ending_soon + d.expired > 0 && (
+              <div className="crm-trial-notice soon" role="status">
+                <AlertTriangle size={22} aria-hidden="true" />
+                <div>
+                  <strong>
+                    {[
+                      d.ending_soon > 0 &&
+                        `${d.ending_soon} ${d.ending_soon === 1 ? "subscription ends" : "subscriptions end"} within 7 days`,
+                      d.expired > 0 &&
+                        `${d.expired} ${d.expired === 1 ? "has" : "have"} expired`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </strong>
+                  <ul className="crm-attention-list">
+                    {d.organizations
+                      .filter((o) => {
+                        const t = subscriptionTiming(o.subscription);
+                        return t && t.tone !== "ok";
+                      })
+                      .map((o) => (
+                        <li key={o.id}>
+                          <button
+                            className="text-button strong"
+                            onClick={() => setDetail(o)}
+                          >
+                            {o.name}
+                          </button>{" "}
+                          · {subscriptionTiming(o.subscription)?.short}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            {d.total > 0 && (
+              <PaymentsNotReadyNotice payments={d.payments} linkToBilling />
+            )}
             <div className="stats-grid">
               <Stat
                 label="Companies"
@@ -200,6 +252,7 @@ export function SuperAdminPage() {
                               trial: "Trial",
                               "past-due": "Renewal overdue",
                               cancelled: "Cancelled",
+                              expired: "Expired",
                               "not-configured": "No plan set",
                             } as Record<string, string>
                           )[state] || state.replaceAll("-", " ");
@@ -313,8 +366,19 @@ export function SuperAdminPage() {
                                 {o.name}
                               </button>
                               <small className="block muted">
-                                {o.settings.company_profile?.city ||
-                                  "Company profile not completed"}
+                                {[
+                                  o.settings.company_profile?.city,
+                                  (() => {
+                                    const p = profileProgress(
+                                      o.settings.company_profile,
+                                    );
+                                    return p.filled === p.total
+                                      ? "Profile complete"
+                                      : `Profile ${p.filled}/${p.total}`;
+                                  })(),
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
                               </small>
                             </div>
                           </div>
@@ -334,7 +398,17 @@ export function SuperAdminPage() {
                             <span className="muted">Not configured</span>
                           )}
                         </td>
-                        <td>{o.subscription?.ends_on || "—"}</td>
+                        <td>
+                          {o.subscription?.ends_on || "—"}
+                          {(() => {
+                            const t = subscriptionTiming(o.subscription);
+                            return t && t.tone !== "ok" ? (
+                              <span className={`crm-renewal-hint ${t.tone}`}>
+                                {t.short}
+                              </span>
+                            ) : null;
+                          })()}
+                        </td>
                         <td>
                           {o.subscription
                             ? `${o.subscription.used_seats} / ${o.subscription.seats}`
@@ -565,6 +639,18 @@ function CompanyDialog({
                     {d.organization.settings.company_profile?.email ||
                       "Add company contact details from Edit profile"}
                   </p>
+                  {(() => {
+                    const p = profileProgress(
+                      d.organization.settings.company_profile,
+                    );
+                    return (
+                      <p className="crm-profile-progress">
+                        {p.filled === p.total
+                          ? "Company profile complete"
+                          : `Profile ${p.filled} of ${p.total} complete · Missing: ${missingProfileText(p.missing)}`}
+                      </p>
+                    );
+                  })()}
                   <UploadControl
                     label={
                       d.organization.settings.logo_id
@@ -616,6 +702,14 @@ function CompanyDialog({
                   {d.subscription && (
                     <Badge value={d.subscription.effective_status} />
                   )}
+                  {(() => {
+                    const t = subscriptionTiming(d.subscription);
+                    return t && t.tone !== "ok" ? (
+                      <span className={`crm-renewal-hint ${t.tone}`}>
+                        {t.short}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <Button variant="secondary" onClick={() => setTerms(true)}>
                   Manage subscription
@@ -908,6 +1002,17 @@ const planFields: Field[] = [
   },
 ];
 
+function readiness(plans: Plan[], config: BillingConfig): PaymentReadiness {
+  const active = plans.filter((plan) => plan.active !== false).length,
+    upi = config.upi_enabled !== false && config.qr_ready;
+  return {
+    plans: active,
+    upi_ready: upi,
+    cod_ready: config.cod_enabled,
+    ready: active > 0 && (upi || config.cod_enabled),
+  };
+}
+
 export function PlatformBillingPage() {
   const q = useData<PlatformBillingData>("/platform/billing"),
     [plan, setPlan] = useState<Plan | true | null>(null),
@@ -931,6 +1036,7 @@ export function PlatformBillingPage() {
       <Load query={q}>
         {(d) => (
           <>
+            <PaymentsNotReadyNotice payments={readiness(d.plans, d.config)} />
             <div className="billing-layout">
               <Panel
                 title="Receive company payments"
@@ -963,13 +1069,34 @@ export function PlatformBillingPage() {
                 <div className="method-summary">
                   <Badge
                     value={
-                      d.config.upi_enabled !== false ? "active" : "inactive"
+                      d.config.upi_enabled === false
+                        ? "inactive"
+                        : d.config.qr_ready
+                          ? "active"
+                          : "pending"
+                    }
+                    label={
+                      d.config.upi_enabled === false
+                        ? "off"
+                        : d.config.qr_ready
+                          ? "ready"
+                          : "not ready"
                     }
                   />
-                  <span>UPI / QR</span>
+                  <span>
+                    UPI / QR
+                    {d.config.upi_enabled !== false && !d.config.qr_ready && (
+                      <small className="block muted">
+                        Upload your QR and payee name to accept UPI.
+                      </small>
+                    )}
+                  </span>
                 </div>
                 <div className="method-summary">
-                  <Badge value={d.config.cod_enabled ? "active" : "inactive"} />
+                  <Badge
+                    value={d.config.cod_enabled ? "active" : "inactive"}
+                    label={d.config.cod_enabled ? "ready" : "off"}
+                  />
                   <span>Cash collection (COD)</span>
                 </div>
                 {d.config.cod_enabled && (
@@ -1342,6 +1469,11 @@ export function CompanyBillingPage() {
                 <Badge value={d.subscription.effective_status} />
               </div>
             )}
+            <TrialNotice
+              subscription={d.subscription}
+              payments={readiness(d.plans, d.config)}
+              showAction={false}
+            />
             {d.payments.some((p) => p.status === "pending") && (
               <div className="billing-notice">
                 <ShieldCheck size={22} />

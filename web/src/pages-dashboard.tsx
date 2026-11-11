@@ -17,6 +17,7 @@ import {
 import { params } from "./api";
 import { useAuth, useData } from "./main";
 import { DistributionChart, TrendChart, chartColors } from "./charts";
+import { SetupChecklist } from "./onboarding";
 import { leadSourceChoices, leadStatusChoices } from "./lead-filters";
 import type { DashboardData, Directory, Task } from "./types";
 import type { Visit } from "./estate-types";
@@ -112,6 +113,7 @@ export function DashboardPage() {
           </>
         }
       />
+      {!personal && <SetupChecklist realEstate={realEstate} />}
       <div className="crm-dashboard-filters">
         <div className="crm-period" aria-label="Dashboard period">
           {[1, 7, 30].map((value) => (

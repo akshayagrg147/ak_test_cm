@@ -42,6 +42,10 @@ async function login(page: Page, phone: string) {
   await expect(page).toHaveURL(/\/app\/(platform|overview)/);
 }
 async function checkAccessible(page: Page) {
+  // Let colour transitions (for example a button changing style) settle first.
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished)),
+  );
   const result = await new AxeBuilder({ page }).analyze();
   expect(
     result.violations.filter((v) =>

@@ -1259,6 +1259,11 @@ so the test creates that lead before the downgrade; the backfill assertions
 are unchanged. A parallel run of pytest with the browser suite briefly exhausted
 the shared local PostgreSQL server; the recorded results are from separate runs.
 
+The first branch CI run failed one axe check (89 passed): the scan ran while a
+button was fading from primary to secondary style, measuring dark text on the
+old blue background. The new specs now wait for running CSS transitions before
+scanning; both specs then passed three consecutive local runs.
+
 Not verified: real Google Ads delivery (needs the owner's Google Ads account and
 "Send test data" after deployment), and 99acres, MagicBricks, Housing.com and
 Meta lead ads, which are not implemented in this stage. Android source, APK and

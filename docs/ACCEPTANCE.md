@@ -1307,3 +1307,9 @@ pinned to the versions the bot already uses: anthropic 2.8.0, python-dotenv 1.2.
 Not yet verified: the image build in CI on Linux, ECR push (needs the stack
 update first), the host settings file, live Meta delivery and a CRM release with
 the bot enabled.
+
+### Backups, monitoring and bot hosting applied — 12 November 2026
+
+- **Stack update applied.** The live template matched the repository. The AMI parameter had drifted to a newer image than the running server (`ami-05fbd65e334e88c16` vs `ami-022374b883d9d7931`). The template now takes a fixed AMI and the guarded script pins the running image. The change set added 11 resources, including the alert subscription, and edited `DeployRole`/`HostRole` in place. The Host was unchanged: same instance, image and launch time.
+- **Release `5df6a36` deployed.** Public health was `ok` on the domain and the IP, and `HealthOK`/`DiskUsedPercent` metrics began arriving.
+- **The pre-deployment upload failed.** The host's AWS CLI rejected `--expected-bucket-owner` on `aws s3 cp`, and the fake-CLI unit tests could not catch this. Uploads now use `aws s3api put-object` per file with the same owner check and SSE. The fake CLI now rejects high-level `aws s3` commands.

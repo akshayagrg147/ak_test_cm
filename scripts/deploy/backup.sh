@@ -57,8 +57,15 @@ upload() {
     bytes="$(manifest "$folder")"
     owner="$(account)"
     bucket="$(bucket_name)"
-    aws s3 cp "$folder" "s3://$bucket/$prefix/$(basename "$folder")/" --recursive \
-        --sse AES256 --expected-bucket-owner "$owner" --only-show-errors --region "$region"
+    # s3api put-object: the host's AWS CLI does not accept --expected-bucket-owner on
+    # "aws s3 cp", and the owner check guards against writing to another account's bucket.
+    local file
+    for file in "$folder"/*; do
+        [[ -f "$file" ]] || continue
+        aws s3api put-object --bucket "$bucket" --key "$prefix/$(basename "$folder")/$(basename "$file")" \
+            --body "$file" --server-side-encryption AES256 --expected-bucket-owner "$owner" \
+            --region "$region" >/dev/null
+    done
     touch "$folder/.uploaded"
     metric BackupSucceeded 1
     metric BackupBytes "$bytes" Bytes

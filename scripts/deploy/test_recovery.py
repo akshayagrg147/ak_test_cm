@@ -29,7 +29,8 @@ fi
     "aws": r"""#!/bin/bash
 echo "aws $*" >> "$LOG"
 if [[ "$1 $2" == "sts get-caller-identity" ]]; then echo "$ACCOUNT"; exit 0; fi
-if [[ "$1 $2" == "s3 cp" && -n "${FAIL_UPLOAD:-}" ]]; then echo 'upload failed' >&2; exit 1; fi
+if [[ "$1 $2" == "s3api put-object" && -n "${FAIL_UPLOAD:-}" ]]; then echo 'upload failed' >&2; exit 1; fi
+if [[ "$1" == s3 ]]; then echo 'aws s3 high-level commands lack --expected-bucket-owner on the host CLI' >&2; exit 255; fi
 """,
     "flock": "#!/bin/bash\nexit 0\n",
     "curl": '#!/bin/bash\necho "curl $*" >> "$LOG"\nprintf \'%s\' "$HEALTH_BODY"\n',
@@ -99,10 +100,14 @@ class HostScripts(unittest.TestCase):
         self.assertEqual(manifest["files"]["database.dump"]["bytes"], len("PGDMP-fake-dump"))
         self.assertTrue((folder / ".uploaded").exists())
         self.assertEqual((folder / "release.txt").read_text().strip(), "a" * 40)
-        upload = next(c for c in self.commands() if c.startswith("aws s3 cp"))
-        self.assertIn(f"s3://viacrm-backups-{ACCOUNT}-ap-south-1/daily/{folder.name}/", upload)
-        for flag in ["--sse AES256", f"--expected-bucket-owner {ACCOUNT}", "--recursive"]:
-            self.assertIn(flag, upload)
+        uploads = [c for c in self.commands() if c.startswith("aws s3api put-object")]
+        keys = {c.split("--key ")[1].split()[0] for c in uploads}
+        self.assertEqual(keys, {f"daily/{folder.name}/{name}" for name in manifest["files"]} | {f"daily/{folder.name}/manifest.json"})
+        for upload in uploads:
+            self.assertIn(f"--bucket viacrm-backups-{ACCOUNT}-ap-south-1", upload)
+            self.assertIn("--server-side-encryption AES256", upload)
+            self.assertIn(f"--expected-bucket-owner {ACCOUNT}", upload)
+        self.assertFalse((folder / ".uploaded").name in " ".join(keys))
         metrics = [c for c in self.commands() if "put-metric-data" in c]
         self.assertTrue(any("--metric-name BackupSucceeded --value 1" in c for c in metrics))
         self.assertTrue(all("--namespace ViaCRM" in c for c in metrics))
@@ -136,7 +141,7 @@ class HostScripts(unittest.TestCase):
         result = self.run_script("backup.sh", "upload", str(folder))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing or empty", result.stderr + result.stdout)
-        self.assertFalse(any(c.startswith("aws s3 cp") for c in self.commands()))
+        self.assertFalse(any(c.startswith("aws s3api put-object") for c in self.commands()))
 
     def test_release_upload_and_local_pruning_only_remove_uploaded_old_copies(self):
         backups = self.root / "backups"
@@ -150,8 +155,9 @@ class HostScripts(unittest.TestCase):
         (newest / ".uploaded").unlink()
         result = self.run_script("backup.sh", "upload", str(newest), BACKUP_BUCKET="named-bucket")
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        upload = next(c for c in self.commands() if c.startswith("aws s3 cp"))
-        self.assertIn(f"s3://named-bucket/release/{newest.name}/", upload)
+        upload = next(c for c in self.commands() if c.startswith("aws s3api put-object"))
+        self.assertIn("--bucket named-bucket", upload)
+        self.assertIn(f"--key release/{newest.name}/", upload)
         remaining = sorted(p.name for p in backups.iterdir())
         # Five newest kept; the oldest never-uploaded copy is kept too.
         self.assertEqual(remaining, sorted([names[0], *names[-5:]]))

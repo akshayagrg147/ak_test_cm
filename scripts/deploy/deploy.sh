@@ -17,11 +17,29 @@ set +a
 [[ "$(basename "$release_dir")" == "$RELEASE_SHA" ]] || { echo 'Release path does not match commit'; exit 1; }
 python3 "$release_dir/host_config.py" --root "$deploy_root" --host "$PUBLIC_HOST"
 export DEPLOY_ROOT="$deploy_root"
+install_schedule_files() {
+    # Each step returns explicitly: set -e is ignored inside the caller's || list.
+    install -d -m 700 "$deploy_root/bin" || return 1
+    install -m 700 "$release_dir/backup.sh" "$deploy_root/bin/viacrm-backup" || return 1
+    install -m 700 "$release_dir/monitor.sh" "$deploy_root/bin/viacrm-monitor" || return 1
+    local unit
+    for unit in viacrm-backup.service viacrm-backup.timer viacrm-monitor.service viacrm-monitor.timer; do
+        install -m 644 "$release_dir/$unit" "/etc/systemd/system/$unit" || return 1
+    done
+    systemctl daemon-reload || return 1
+    systemctl enable --now viacrm-backup.timer viacrm-monitor.timer >/dev/null || return 1
+}
+install_schedules() {
+    # Daily off-server backups and five-minute health/disk reports. Never fatal for a
+    # healthy release; missing reports raise the CloudWatch alarms instead.
+    install_schedule_files || echo 'Backup and monitoring schedules need operator attention'
+}
 compose() { docker compose --project-name viacrm --env-file "$deploy_root/shared/host.env" --env-file "$release_dir/images.env" -f "$release_dir/compose.yaml" "$@"; }
 previous_dir="$(readlink -f "$deploy_root/current" 2>/dev/null || true)"
 if [[ "$previous_dir" == "$release_dir" ]]; then
     echo "Release $RELEASE_SHA is already current"
     compose up -d --wait --wait-timeout 240 --remove-orphans
+    install_schedules
     exit 0
 fi
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY" >/dev/null
@@ -81,6 +99,10 @@ if [[ -n "$previous_dir" && -f "$previous_dir/images.env" ]]; then
     ln -sfn "$previous_dir" "$deploy_root/previous"
 fi
 ln -sfn "$release_dir" "$deploy_root/current"
+install_schedules
+# Copy the pre-migration recovery point off the server after the release is healthy.
+"$deploy_root/bin/viacrm-backup" upload "$backup" ||
+    echo 'Pre-deployment backup is kept on the server; its off-server upload needs attention'
 # Compose already removes superseded containers. Remove unused project images,
 # retaining current and previous images for a schema-compatible rollback.
 if ! python3 "$release_dir/cleanup_images.py" "$deploy_root"; then

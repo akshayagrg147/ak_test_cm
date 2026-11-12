@@ -81,6 +81,12 @@ class ReleasePackaging(unittest.TestCase):
                         "host_config.py",
                         "cleanup_images.py",
                         "configure_domain.py",
+                        "backup.sh",
+                        "monitor.sh",
+                        "viacrm-backup.service",
+                        "viacrm-backup.timer",
+                        "viacrm-monitor.service",
+                        "viacrm-monitor.timer",
                         "images.env",
                     },
                 )

@@ -16,6 +16,202 @@ def GET(resource, key):
     return {"Fn::GetAtt": [resource, key]}
 
 
+METRIC_NAMESPACE = "ViaCRM"
+BACKUP_PREFIXES = ["daily/", "release/"]
+
+
+def alarm(description, metric, statistic, comparison, threshold, period, evaluations, missing, **extra):
+    actions = [REF("AlertTopic")]
+    return {
+        "Type": "AWS::CloudWatch::Alarm",
+        "Properties": {
+            "AlarmDescription": description,
+            "Namespace": extra.pop("namespace", METRIC_NAMESPACE),
+            "MetricName": metric,
+            "Statistic": statistic,
+            "ComparisonOperator": comparison,
+            "Threshold": threshold,
+            "Period": period,
+            "EvaluationPeriods": evaluations,
+            "DatapointsToAlarm": evaluations,
+            "TreatMissingData": missing,
+            "AlarmActions": extra.pop("alarm_actions", []) + actions,
+            "OKActions": actions,
+            **extra,
+        },
+    }
+
+
+def recovery_resources():
+    """Off-host backups and alerting. Adds resources only; the Host itself is unchanged."""
+    host_dimension = [{"Name": "InstanceId", "Value": REF("Host")}]
+    return {
+        "BackupBucket": {
+            "Type": "AWS::S3::Bucket",
+            "DeletionPolicy": "Retain",
+            "UpdateReplacePolicy": "Retain",
+            "Properties": {
+                "BucketName": SUB("viacrm-backups-${AWS::AccountId}-${AWS::Region}"),
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    key: True
+                    for key in [
+                        "BlockPublicAcls",
+                        "IgnorePublicAcls",
+                        "BlockPublicPolicy",
+                        "RestrictPublicBuckets",
+                    ]
+                },
+                "OwnershipControls": {"Rules": [{"ObjectOwnership": "BucketOwnerEnforced"}]},
+                "VersioningConfiguration": {"Status": "Enabled"},
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "DailyBackupRetention",
+                            "Status": "Enabled",
+                            "Prefix": "daily/",
+                            "ExpirationInDays": 35,
+                            "NoncurrentVersionExpiration": {"NoncurrentDays": 7},
+                            "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1},
+                        },
+                        {
+                            "Id": "ReleaseBackupRetention",
+                            "Status": "Enabled",
+                            "Prefix": "release/",
+                            "ExpirationInDays": 90,
+                            "NoncurrentVersionExpiration": {"NoncurrentDays": 7},
+                            "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1},
+                        },
+                    ]
+                },
+                "Tags": [{"Key": "Project", "Value": "viacrm"}],
+            },
+        },
+        "BackupBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": REF("BackupBucket"),
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Deny",
+                            "Principal": "*",
+                            "Action": "s3:*",
+                            "Resource": [
+                                GET("BackupBucket", "Arn"),
+                                SUB("${BackupBucket.Arn}/*"),
+                            ],
+                            "Condition": {"Bool": {"aws:SecureTransport": "false"}},
+                        }
+                    ],
+                },
+            },
+        },
+        "HostBackupPolicy": {
+            # Upload-only: the server cannot list, read or delete earlier backups.
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "ViaCrmBackupUploadAndMetrics",
+                "Roles": [REF("HostRole")],
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "s3:PutObject",
+                            "Resource": [
+                                SUB("${BackupBucket.Arn}/" + prefix + "*")
+                                for prefix in BACKUP_PREFIXES
+                            ],
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": "cloudwatch:PutMetricData",
+                            "Resource": "*",
+                            "Condition": {
+                                "StringEquals": {"cloudwatch:namespace": METRIC_NAMESPACE}
+                            },
+                        },
+                    ],
+                },
+            },
+        },
+        "AlertTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {"DisplayName": "ViaCRM alerts", "TopicName": "viacrm-alerts"},
+        },
+        "AlertEmailSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Condition": "HasAlertEmail",
+            "Properties": {
+                "TopicArn": REF("AlertTopic"),
+                "Protocol": "email",
+                "Endpoint": REF("AlertEmail"),
+            },
+        },
+        "SiteDownAlarm": alarm(
+            "ViaCRM public HTTPS health is failing or the server stopped reporting",
+            "HealthOK",
+            "Minimum",
+            "LessThanThreshold",
+            1,
+            300,
+            2,
+            "breaching",
+        ),
+        "BackupMissingAlarm": alarm(
+            "No successful off-server ViaCRM backup in the last 26 hours",
+            "BackupSucceeded",
+            "Sum",
+            "LessThanThreshold",
+            1,
+            3600,
+            26,
+            "breaching",
+        ),
+        "DiskSpaceAlarm": alarm(
+            "ViaCRM server disk is more than 85% full",
+            "DiskUsedPercent",
+            "Maximum",
+            "GreaterThanThreshold",
+            85,
+            300,
+            2,
+            "missing",
+        ),
+        "SystemStatusAlarm": alarm(
+            "AWS hardware or network problem on the ViaCRM server; automatic recovery started",
+            "StatusCheckFailed_System",
+            "Maximum",
+            "GreaterThanOrEqualToThreshold",
+            1,
+            60,
+            2,
+            "missing",
+            namespace="AWS/EC2",
+            Dimensions=host_dimension,
+            alarm_actions=[SUB("arn:aws:automate:${AWS::Region}:ec2:recover")],
+        ),
+        "InstanceStatusAlarm": alarm(
+            "The ViaCRM server's operating system is not responding to AWS status checks",
+            "StatusCheckFailed_Instance",
+            "Maximum",
+            "GreaterThanOrEqualToThreshold",
+            1,
+            60,
+            5,
+            "missing",
+            namespace="AWS/EC2",
+            Dimensions=host_dimension,
+        ),
+    }
+
+
 def template():
     account = "${AWS::AccountId}"
     region = "${AWS::Region}"
@@ -344,6 +540,7 @@ touch /opt/viacrm/shared/host-ready
             },
         },
     }
+    resources.update(recovery_resources())
     for name in ["api", "web"]:
         resources[name.title() + "Repository"] = {
             "Type": "AWS::ECR::Repository",
@@ -415,10 +612,17 @@ touch /opt/viacrm/shared/host-ready
                 "Default": "true",
                 "AllowedValues": ["true", "false"],
             },
+            "AlertEmail": {
+                "Type": "String",
+                "Default": "",
+                "AllowedPattern": "^$|[^@\\s]+@[^@\\s]+\\.[^@\\s]+",
+                "Description": "Email that receives ViaCRM outage, backup and disk alerts (AWS sends a confirmation email)",
+            },
         },
         "Conditions": {
             "HasDomain": {"Fn::Not": [{"Fn::Equals": [REF("Domain"), ""]}]},
             "CreateOidc": {"Fn::Equals": [REF("CreateGitHubProvider"), "true"]},
+            "HasAlertEmail": {"Fn::Not": [{"Fn::Equals": [REF("AlertEmail"), ""]}]},
         },
         "Resources": resources,
         "Outputs": {
@@ -431,6 +635,8 @@ touch /opt/viacrm/shared/host-ready
             "ReleaseBucket": {"Value": REF("ReleaseBucket")},
             "ApiRepository": {"Value": GET("ApiRepository", "RepositoryUri")},
             "WebRepository": {"Value": GET("WebRepository", "RepositoryUri")},
+            "BackupBucket": {"Value": REF("BackupBucket")},
+            "AlertTopic": {"Value": REF("AlertTopic")},
         },
     }
 

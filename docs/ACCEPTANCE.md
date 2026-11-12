@@ -1269,3 +1269,21 @@ Not verified: real Google Ads delivery (needs the owner's Google Ads account and
 Meta lead ads, which are not implemented in this stage. Android source, APK and
 call-sync contracts are unchanged; device contacts still return only id, name,
 phone and dnd.
+
+## Off-server backups and monitoring (prepared) — 12 November 2026
+
+Code and template changes for daily off-server backups, pre-deployment backup
+upload, five-minute health/disk reporting and CloudWatch alarms. The
+CloudFormation stack change is **not applied**; it needs the owner's AWS session
+and approval. See `docs/AWS_DEPLOYMENT.md`.
+
+| Check | Executed result |
+| --- | --- |
+| Deployment unit tests (`scripts/deploy`) | **39 passed** (13 new: backup upload/manifest/encryption flags, failed upload keeps local copy and reports no success, empty dump refused, safe local pruning, health/disk reporting, bucket/IAM/alarm configuration, unchanged Host and roles, guarded change-set checks) |
+| `bash -n` and `shellcheck -S warning` on deploy, backup and monitor scripts | Passed |
+| `cfn-lint` on the generated template | No new findings (existing unused `GitHubRepository` warning only) |
+| Existing resources in `infra/aws/stack.json` | Byte-identical; ten resources and one parameter added |
+
+The scripts were exercised with fake `docker`, `aws`, `curl`, `df` and `flock`
+commands; they have not yet run on the production host, uploaded to S3 or raised
+a real alarm. Those require the stack update, a release and a restore drill.

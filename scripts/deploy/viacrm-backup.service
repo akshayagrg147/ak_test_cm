@@ -1,0 +1,12 @@
+[Unit]
+Description=ViaCRM off-server backup (database, files and matching configuration)
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/viacrm/bin/viacrm-backup daily
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=2h

@@ -176,10 +176,70 @@ and deploy a compatible fix or restore the coordinated backup. Never downgrade a
 populated database merely to force an older application to start.
 
 Coordinated backups are retained in `/opt/viacrm/backups`, accessible only to root.
-They contain personal data and secrets. They are host-local recovery points;
-off-host backup scheduling, monitoring and retention must be configured before
-depending on this single-server installation for disaster recovery. Release
-artifacts in S3 are code bundles and are not database/file backups.
+They contain personal data and secrets. Release artifacts in S3 are code bundles
+and are not database/file backups.
+
+## Off-server backups and monitoring
+
+Each release installs two systemd timers from the release bundle; the instance's
+UserData is unchanged, so no restart is needed:
+
+- `viacrm-backup.timer` runs about 03:00 India time. It waits for any deployment
+  lock, takes an online `pg_dump` (one consistent snapshot; the CRM stays up),
+  archives the `viacrm_files` volume and copies the matching `app.env` and
+  `database.env`, writes a SHA-256 `manifest.json` and uploads the folder to
+  `s3://viacrm-backups-ACCOUNT-ap-south-1/daily/`. After each successful deploy the
+  pre-migration backup is also uploaded to `release/`. An empty database dump is
+  never uploaded. Three daily and five release copies stay on the server; older
+  local copies are removed only after a successful upload.
+- `viacrm-monitor.timer` reports public HTTPS health (`/api/health`, certificate
+  verification on) and root disk use to CloudWatch every five minutes.
+
+The bucket is private, SSE-S3 encrypted, versioned, TLS-only and keeps daily
+copies for 35 days and release copies for 90 days. The server may only upload
+(`s3:PutObject` to `daily/*` and `release/*`) and publish metrics in the `ViaCRM`
+namespace; it cannot list, read or delete backups, so a compromised server
+cannot erase earlier copies. Backups include the encryption and signing keys
+needed for a usable restore, so treat bucket read access as access to all
+customer data and grant it only to operators.
+
+CloudWatch alarms notify the `viacrm-alerts` SNS topic (and the confirmed
+`AlertEmail`, if set) and send an OK message on recovery:
+
+| Alarm | Fires when |
+| --- | --- |
+| `SiteDownAlarm` | Health is not ok, or no report, for 10 minutes |
+| `BackupMissingAlarm` | No successful off-server backup for 26 hours |
+| `DiskSpaceAlarm` | Root disk above 85% for 10 minutes |
+| `SystemStatusAlarm` | AWS host failure; also triggers EC2 automatic recovery |
+| `InstanceStatusAlarm` | The operating system fails status checks for 5 minutes |
+
+A missing health report counts as an outage, which covers a stopped server. The
+check runs on the server itself, so a network path problem that affects only
+outside users is not detected; add an external uptime check if that matters.
+Expected cost is small: a few custom metrics and alarms plus S3 storage for the
+retained backups.
+
+These resources are a CloudFormation stack change that the GitHub deployment
+role cannot make. With an operator's own session (`aws login`), first preview:
+
+```bash
+python3 scripts/deploy/apply_recovery_stack.py --alert-email you@example.com
+```
+
+It creates a change set with every existing parameter reused, prints it and
+refuses unless every change adds one of the expected recovery resources. It
+deletes the preview and exits without changes. If it reports `Host` (for
+example because the latest Amazon Linux AMI parameter now resolves to a newer
+image), do not apply it: that would modify or replace the production server.
+When the preview is clean, re-run with `--execute`, then confirm the AWS
+subscription email. Releases deployed before the stack exists keep local
+backups and report upload/metric failures in the timer logs
+(`journalctl -u viacrm-backup -u viacrm-monitor`).
+
+To restore from S3, an operator downloads one folder, checks `manifest.json`
+hashes, and follows the restore drill in `docs/OPERATIONS.md` into a new
+isolated database and file volume before switching traffic.
 
 See `docs/OPERATIONS.md` for a restore drill and schema compatibility limits.
 The pipeline retains 20 images per ECR repository, S3 code bundles for 90 days,

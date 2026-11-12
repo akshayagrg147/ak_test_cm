@@ -1,0 +1,10 @@
+[Unit]
+Description=Check ViaCRM health every five minutes
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*:0/5
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

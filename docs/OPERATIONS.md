@@ -52,7 +52,7 @@ docker compose run --rm --no-deps --user 0 -v "$PWD:/backup" api python -c "impo
 docker compose start api worker web
 ```
 
-Protect dump, file archive and secrets using encrypted storage and restricted access. Choose retention and off-site storage according to business needs. Backups can contain personal data and password hashes. Never commit them. PostgreSQL should use production password authentication, private networking and its own persistent volume.
+Protect dump, file archive and secrets using encrypted storage and restricted access. Production uploads daily and pre-deployment backups off the server; see "Off-server backups and monitoring" in `docs/AWS_DEPLOYMENT.md`. Backups can contain personal data and password hashes. Never commit them. PostgreSQL should use production password authentication, private networking and its own persistent volume.
 
 ## Restore drill
 

@@ -580,8 +580,10 @@ touch /opt/viacrm/shared/host-ready
             "VpcId": {"Type": "AWS::EC2::VPC::Id"},
             "SubnetId": {"Type": "AWS::EC2::Subnet::Id"},
             "AmiId": {
-                "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-                "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
+                # A fixed image: an SSM "latest" path re-resolves on every stack update and
+                # would replace the production server whenever Amazon publishes a new AMI.
+                "Type": "AWS::EC2::Image::Id",
+                "Description": "Pinned Amazon Linux 2023 x86_64 AMI. Changing it replaces the server; patch the running host instead",
             },
             "InstanceType": {
                 "Type": "String",

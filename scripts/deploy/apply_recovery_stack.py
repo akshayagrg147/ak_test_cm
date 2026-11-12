@@ -77,7 +77,15 @@ def main():
     if stack["StackStatus"] not in {"CREATE_COMPLETE", "UPDATE_COMPLETE", "UPDATE_ROLLBACK_COMPLETE"}:
         sys.exit(f"Stack is {stack['StackStatus']}; wait until it is stable")
     existing = {p["ParameterKey"] for p in stack.get("Parameters", [])}
-    parameters = [f"ParameterKey={key},UsePreviousValue=true" for key in sorted(existing) if key != "AlertEmail"]
+    # Pin the AMI to the image the running server already uses, so the Host is unchanged.
+    host = aws("cloudformation", "describe-stack-resource", "--stack-name", STACK, "--logical-resource-id", "Host")
+    instance = host["StackResourceDetail"]["PhysicalResourceId"]
+    image = aws("ec2", "describe-instances", "--instance-ids", instance)["Reservations"][0]["Instances"][0]["ImageId"]
+    print(f"Pinning AmiId to {image}, the image of running instance {instance}")
+    parameters = [
+        f"ParameterKey={key},UsePreviousValue=true" for key in sorted(existing) if key not in {"AlertEmail", "AmiId"}
+    ]
+    parameters.append(f"ParameterKey=AmiId,ParameterValue={image}")
     parameters.append(f"ParameterKey=AlertEmail,ParameterValue={args.alert_email}")
     name = "add-backups-monitoring-" + time.strftime("%Y%m%d%H%M%S", time.gmtime())
     aws(

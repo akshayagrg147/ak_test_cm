@@ -227,7 +227,11 @@ role cannot make. With an operator's own session (`aws login`), first preview:
 python3 scripts/deploy/apply_recovery_stack.py --alert-email you@example.com
 ```
 
-It creates a change set with every existing parameter reused, prints it and
+It pins `AmiId` to the running server's current image, because the template
+now takes a fixed AMI ID instead of the "latest Amazon Linux" SSM path (that path
+re-resolves on each update and would replace the server). A fresh installation
+must pass a current Amazon Linux 2023 x86_64 AMI ID. The script creates a change
+set with every other existing parameter reused, prints it and
 refuses unless every change adds one of the expected recovery resources. It
 deletes the preview and exits without changes. If it reports `Host` (for
 example because the latest Amazon Linux AMI parameter now resolves to a newer

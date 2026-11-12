@@ -15,6 +15,15 @@
         not path /api /api/*
     }
     redir @alias_page https://{$PUBLIC_HOST}{uri} 308
-    reverse_proxy web:80
+    # Instagram webhook for the lead bot; everything else goes to the CRM.
+    handle /ig-webhook* {
+        request_body {
+            max_size 1MB
+        }
+        reverse_proxy igbot:8080
+    }
+    handle {
+        reverse_proxy web:80
+    }
     header Strict-Transport-Security "max-age=31536000"
 }

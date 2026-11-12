@@ -237,6 +237,34 @@ subscription email. Releases deployed before the stack exists keep local
 backups and report upload/metric failures in the timer logs
 (`journalctl -u viacrm-backup -u viacrm-monitor`).
 
+## Instagram lead bot (`igbot`)
+
+The owner chose to run the Instagram DM/comment lead bot on this host. Its
+source is `services/igbot/`. Each `main` release builds it into the private
+`viacrm/igbot` ECR repository. The `igbot` Compose service starts only when
+`/opt/viacrm/shared/igbot.env` exists (`deploy.sh` then enables the `igbot`
+profile). It has a 128 MB memory limit and its own `viacrm_igbot_data` volume
+(SQLite state and lead copies). Caddy sends `https://viacrm.in/ig-webhook*` to
+the bot with a 1 MB request limit; every other path is unchanged. Alias hosts
+redirect `/ig-webhook` to the canonical domain. The bot checks Meta's
+`X-Hub-Signature-256` on every POST. Daily backups include its volume and
+settings file. A bot failure does not stop the CRM, but it shares the server's
+CPU, memory and releases.
+
+Create the settings file once, yourself, so secret values never pass through
+Git, CI or Systems Manager command history. In the AWS console open EC2 →
+the `viacrm` instance → Connect → Session Manager, then run:
+
+```bash
+sudo install -m 600 -o root -g root /dev/stdin /opt/viacrm/shared/igbot.env
+```
+
+Paste the lines from your local `~/insta-lead-agent/.env`. Do not include `PORT`
+(the container uses 8080), and keep `DRY_RUN=1` for a first check if you want.
+Press Enter, then Ctrl-D. The next release (or a rerun of the current one)
+starts the bot. Then set the Meta app's webhook callback to
+`https://viacrm.in/ig-webhook` with the same `VERIFY_TOKEN`.
+
 To restore from S3, an operator downloads one folder, checks `manifest.json`
 hashes, and follows the restore drill in `docs/OPERATIONS.md` into a new
 isolated database and file volume before switching traffic.

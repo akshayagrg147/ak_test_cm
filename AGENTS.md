@@ -54,6 +54,13 @@ Version 1.1.4 retries a failed history screen when it resumes. Do not interpret
 an HTML/unstructured proxy 404 as a confirmed lead reassignment; use the CRM
 error code. Preserve current-permission checks and file-picker exports.
 
+On 12 November 2026 the owner chose to host the Instagram DM/comment lead bot
+(`services/igbot/`) on the ViaCRM production server after being told it shares
+the CRM's server and releases. It is an optional Compose profile enabled only by
+the host's private `shared/igbot.env`; keep its secrets out of Git, CI and SSM
+command history, its 128 MB limit, its `/ig-webhook*` route and 1 MB body cap.
+It is not WhatsApp; WhatsApp remains excluded.
+
 - Backend: FastAPI, SQLAlchemy and PostgreSQL only. Run from `backend/` with the root `.venv`.
 - The user added a dedicated field-executive visit/handoff/follow-up flow and
   explicitly confirmed shared coordination: caller keeps access, executive takes

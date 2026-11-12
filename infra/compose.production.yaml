@@ -64,8 +64,19 @@ services:
       - caddy_config:/config
     restart: unless-stopped
     logging: *logging
+  igbot:
+    # Instagram DM/comment lead bot. Starts only when the host has
+    # shared/igbot.env (deploy.sh enables the "igbot" profile).
+    profiles: [igbot]
+    image: ${IGBOT_IMAGE:-}
+    env_file: ${DEPLOY_ROOT:-/opt/viacrm}/shared/igbot.env
+    volumes: [igbot_data:/app/data]
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logging
 volumes:
   database: {name: viacrm_database}
   files: {name: viacrm_files}
   tls: {name: viacrm_tls}
   caddy_config: {name: viacrm_caddy_config}
+  igbot_data: {name: viacrm_igbot_data}

@@ -1,9 +1,9 @@
-"""Add off-server backups and alarms to the viacrm-production stack, refusing any other change.
+"""Add backups, alarms and the Instagram bot image repository; refuse any other stack change.
 
 Run with an operator's own AWS session (for example after `aws login`). The script creates a
 CloudFormation change set from infra/aws/stack.json, reusing every existing parameter value, and
 inspects it. It executes only with --execute and only when every change adds one of the expected
-recovery resources. In particular it refuses when the production Host would be modified or
+resources, apart from in-place (non-replacing) policy edits to DeployRole and HostRole. In particular it refuses when the production Host would be modified or
 replaced, for example because the latest Amazon Linux AMI parameter now resolves differently.
 """
 
@@ -29,7 +29,10 @@ EXPECTED_ADDS = {
     "DiskSpaceAlarm",
     "SystemStatusAlarm",
     "InstanceStatusAlarm",
+    "IgbotRepository",
 }
+# In-place policy edits that add the Instagram bot's image repository; never a replacement.
+ALLOWED_MODIFY = {"DeployRole", "HostRole"}
 EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
@@ -53,6 +56,9 @@ def unexpected_changes(changes, alert_email):
         item = change.get("ResourceChange", {})
         logical = item.get("LogicalResourceId", "?")
         action = item.get("Action")
+        in_place = action == "Modify" and logical in ALLOWED_MODIFY and item.get("Replacement") == "False"
+        if in_place:
+            continue
         if action != "Add" or logical not in allowed:
             problems.append(f"{action} {logical} (replacement: {item.get('Replacement', 'n/a')})")
     missing = allowed - {c.get("ResourceChange", {}).get("LogicalResourceId") for c in changes}

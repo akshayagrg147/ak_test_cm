@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sha", required=True)
-    for name in ["api", "web", "postgres", "caddy"]:
+    for name in ["api", "web", "postgres", "caddy", "igbot"]:
         parser.add_argument(f"--{name}-image", required=True)
     args = parser.parse_args()
     package(
@@ -59,6 +59,6 @@ if __name__ == "__main__":
         args.sha,
         {
             f"{name.upper()}_IMAGE": getattr(args, f"{name}_image")
-            for name in ["api", "web", "postgres", "caddy"]
+            for name in ["api", "web", "postgres", "caddy", "igbot"]
         },
     )

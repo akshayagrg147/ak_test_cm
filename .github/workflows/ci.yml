@@ -24,6 +24,14 @@ jobs:
       - run: docker compose -p aven-ci up --build -d --wait --wait-timeout 300
       - run: docker compose -p aven-ci exec -T api python -m app.seed
       - run: python scripts/verify_container.py --project aven-ci --env-file .env --override /tmp/viacrm-ci-override.yaml --url http://localhost:8080
+      - name: Build the Instagram lead bot image and check its health endpoint
+        run: |
+          docker build -t viacrm-igbot-ci services/igbot
+          docker run -d --name igbot-ci -e DRY_RUN=1 -p 127.0.0.1:18081:8080 viacrm-igbot-ci
+          for i in $(seq 30); do curl -fsS http://127.0.0.1:18081/health && break; sleep 1; done
+          curl -fsS http://127.0.0.1:18081/ig-webhook/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST --data '{}' http://127.0.0.1:18081/ig-webhook)" = 403
+          docker rm -f igbot-ci
       - name: Remove disposable CI stack
         if: always()
         run: docker compose -p aven-ci down --volumes --remove-orphans
@@ -138,16 +146,33 @@ jobs:
           build-args: VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=viacrm-web
           cache-to: type=gha,mode=max,scope=viacrm-web
+      - name: Derive the Instagram bot repository next to viacrm/api
+        if: steps.latest.outputs.deploy == 'true'
+        run: |
+          case "$API_REPOSITORY" in */viacrm/api) ;; *) echo 'Unexpected API repository'; exit 1 ;; esac
+          echo "IGBOT_REPOSITORY=${API_REPOSITORY%/api}/igbot" >> "$GITHUB_ENV"
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        if: steps.latest.outputs.deploy == 'true'
+        id: igbot
+        with:
+          context: services/igbot
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IGBOT_REPOSITORY }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: VCS_REF=${{ github.sha }}
+          cache-from: type=gha,scope=viacrm-igbot
+          cache-to: type=gha,mode=max,scope=viacrm-igbot
       - name: Package and deploy the tested release
         if: steps.latest.outputs.deploy == 'true'
         env:
           API_DIGEST: ${{ steps.api.outputs.digest }}
           WEB_DIGEST: ${{ steps.web.outputs.digest }}
+          IGBOT_DIGEST: ${{ steps.igbot.outputs.digest }}
           POSTGRES_IMAGE: ${{ vars.POSTGRES_IMAGE }}
           CADDY_IMAGE: ${{ vars.CADDY_IMAGE }}
         run: |
           head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
           if [ "$head" != "$GITHUB_SHA" ]; then echo 'A newer main commit will deploy instead'; exit 0; fi
-          python3 scripts/deploy/package_release.py --output release.tar.gz --sha "$GITHUB_SHA" --api-image "$API_REPOSITORY@$API_DIGEST" --web-image "$WEB_REPOSITORY@$WEB_DIGEST" --postgres-image "$POSTGRES_IMAGE" --caddy-image "$CADDY_IMAGE"
+          python3 scripts/deploy/package_release.py --output release.tar.gz --sha "$GITHUB_SHA" --api-image "$API_REPOSITORY@$API_DIGEST" --web-image "$WEB_REPOSITORY@$WEB_DIGEST" --postgres-image "$POSTGRES_IMAGE" --caddy-image "$CADDY_IMAGE" --igbot-image "$IGBOT_REPOSITORY@$IGBOT_DIGEST"
           aws s3 cp release.tar.gz "s3://$RELEASE_BUCKET/releases/$GITHUB_SHA.tar.gz" --sse AES256 --only-show-errors
           python3 scripts/deploy/dispatch.py --instance "$EC2_INSTANCE_ID" --sha "$GITHUB_SHA"

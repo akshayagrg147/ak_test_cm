@@ -96,7 +96,12 @@ daily() {
         exec -T db pg_dump -U crm -d talkocrm -Fc > "$folder/database.dump"
     docker run --rm --network none -v viacrm_files:/source:ro -v "$folder:/backup" \
         --entrypoint tar "$POSTGRES_IMAGE" -czf /backup/files.tar.gz -C /source .
+    if docker volume inspect viacrm_igbot_data >/dev/null 2>&1; then
+        docker run --rm --network none -v viacrm_igbot_data:/source:ro -v "$folder:/backup" \
+            --entrypoint tar "$POSTGRES_IMAGE" -czf /backup/igbot-data.tar.gz -C /source .
+    fi
     cp "$deploy_root/shared/app.env" "$deploy_root/shared/database.env" "$folder/"
+    if [[ -f "$deploy_root/shared/igbot.env" ]]; then cp "$deploy_root/shared/igbot.env" "$folder/"; fi
     release="$(basename "$current")"
     echo "$release" > "$folder/release.txt"
     flock -u 9

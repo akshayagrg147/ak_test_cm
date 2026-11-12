@@ -1287,3 +1287,23 @@ and approval. See `docs/AWS_DEPLOYMENT.md`.
 The scripts were exercised with fake `docker`, `aws`, `curl`, `df` and `flock`
 commands; they have not yet run on the production host, uploaded to S3 or raised
 a real alarm. Those require the stack update, a release and a restore drill.
+
+## Instagram lead bot on the ViaCRM host (prepared) — 12 November 2026
+
+The owner confirmed in this session, after being told about the shared failure
+domain, that the Instagram DM/comment lead bot should run on the ViaCRM server.
+Its source was copied into `services/igbot/`. `.env`, `data/` and media were
+excluded and `.env.example` was rewritten with empty values. Dependencies are
+pinned to the versions the bot already uses: anthropic 2.8.0, python-dotenv 1.2.4.
+
+| Check | Executed result |
+| --- | --- |
+| Deployment tests (`scripts/deploy`) | **42 passed** (bot image packaging, cleanup tolerating an unpulled optional bot image, bot data/settings in backups, bot ECR repository and pull/push scope, in-place role edits allowed only without replacement) |
+| `verify_caddy.py` with official Caddy 2.11.7 (macOS, release checksum verified) | IP-only and domain/www/IP configurations pass. `/ig-webhook*` reaches only the bot upstream, all other and `/api` paths reach the CRM upstream, aliases redirect `/ig-webhook`, and a body over 1 MB returns 413 |
+| Compose profiles | Without `shared/igbot.env` the services are api, db, https, web, worker; with it `igbot` is added |
+| Local bot smoke test (DRY_RUN, test secrets, separate port, own process only) | `/health` and `/ig-webhook/health` 200; verification with the right token 200 and wrong token 403; unsigned POST 403; correctly signed POST 200 |
+| Shell checks | `bash -n` and `shellcheck -S warning` pass |
+
+Not yet verified: the image build in CI on Linux, ECR push (needs the stack
+update first), the host settings file, live Meta delivery and a CRM release with
+the bot enabled.

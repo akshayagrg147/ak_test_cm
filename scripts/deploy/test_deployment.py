@@ -4,6 +4,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
@@ -66,7 +67,7 @@ class ReleasePackaging(unittest.TestCase):
     def test_archive_has_only_deployment_files_and_immutable_references(self):
         images = {
             f"{name}_IMAGE": f"example.com/viacrm/{name.lower()}@sha256:" + "b" * 64
-            for name in ["API", "WEB", "POSTGRES", "CADDY"]
+            for name in ["API", "WEB", "POSTGRES", "CADDY", "IGBOT"]
         }
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "release.tar.gz"
@@ -92,6 +93,7 @@ class ReleasePackaging(unittest.TestCase):
                 )
                 env = archive.extractfile("images.env").read().decode()
                 self.assertIn("RELEASE_SHA=" + "a" * 40, env)
+                self.assertIn("IGBOT_IMAGE=example.com/viacrm/igbot@sha256:", env)
                 self.assertNotIn("SECRET_KEY", env)
                 self.assertNotIn("DB_PASSWORD", env)
                 self.assertTrue(all(member.isfile() for member in archive.getmembers()))
@@ -113,23 +115,52 @@ class Cleanup(unittest.TestCase):
                 (root / release).mkdir()
                 (root / release / "images.env").write_text(
                     f"API_IMAGE={release}-api\nWEB_IMAGE={release}-web\n"
+                    f"IGBOT_IMAGE={release}-igbot\n"
                 )
 
-            def output(command, **kwargs):
+            def listing(command, **kwargs):
+                return "sha256:current-api\nsha256:current-web\nsha256:current-igbot\nsha256:previous-api\nsha256:previous-web\nsha256:obsolete\nsha256:obsolete"
+
+            def run(command, **kwargs):
                 if command[2] == "inspect":
-                    return "sha256:" + command[-1] + "\n"
-                return "sha256:current-api\nsha256:current-web\nsha256:previous-api\nsha256:previous-web\nsha256:obsolete\nsha256:obsolete"
+                    # The previous release's optional bot image was never pulled.
+                    missing = command[-1] == "previous-igbot"
+                    return SimpleNamespace(
+                        returncode=1 if missing else 0,
+                        stdout="" if missing else "sha256:" + command[-1] + "\n",
+                    )
+                return SimpleNamespace(returncode=0, stdout="")
 
             with (
                 patch.object(
-                    cleanup_module.subprocess, "check_output", side_effect=output
+                    cleanup_module.subprocess, "check_output", side_effect=listing
                 ),
-                patch.object(cleanup_module.subprocess, "run") as run,
+                patch.object(
+                    cleanup_module.subprocess, "run", side_effect=run
+                ) as runner,
             ):
                 cleanup_module.cleanup(root)
-            run.assert_called_once_with(
-                ["docker", "image", "rm", "sha256:obsolete"], check=False
-            )
+            removals = [
+                call.args[0] for call in runner.call_args_list if call.args[0][2] == "rm"
+            ]
+            self.assertEqual(removals, [["docker", "image", "rm", "sha256:obsolete"]])
+            for call in runner.call_args_list:
+                self.assertNotIn("--force", call.args[0])
+
+    def test_missing_required_release_image_stops_cleanup(self):
+        cleanup_module = module("cleanup_images")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "current").mkdir()
+            (root / "current/images.env").write_text("API_IMAGE=gone\n")
+            failed = SimpleNamespace(returncode=1, stdout="")
+            with (
+                patch.object(cleanup_module.subprocess, "run", return_value=failed),
+                patch.object(cleanup_module.subprocess, "check_output") as listing,
+                self.assertRaises(RuntimeError),
+            ):
+                cleanup_module.cleanup(root)
+            listing.assert_not_called()
 
 
 class Infrastructure(unittest.TestCase):

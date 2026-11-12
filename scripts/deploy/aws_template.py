@@ -17,6 +17,8 @@ def GET(resource, key):
 
 
 METRIC_NAMESPACE = "ViaCRM"
+# igbot: the Instagram lead bot, an optional service on the same host.
+IMAGE_REPOSITORIES = ["api", "web", "igbot"]
 BACKUP_PREFIXES = ["daily/", "release/"]
 
 
@@ -217,7 +219,7 @@ def template():
     region = "${AWS::Region}"
     ecr_arns = [
         SUB(f"arn:aws:ecr:{region}:{account}:repository/viacrm/{name}")
-        for name in ["api", "web"]
+        for name in IMAGE_REPOSITORIES
     ]
     user_data = r"""#!/bin/bash
 set -euo pipefail
@@ -541,7 +543,7 @@ touch /opt/viacrm/shared/host-ready
         },
     }
     resources.update(recovery_resources())
-    for name in ["api", "web"]:
+    for name in IMAGE_REPOSITORIES:
         resources[name.title() + "Repository"] = {
             "Type": "AWS::ECR::Repository",
             "DeletionPolicy": "Retain",
@@ -635,6 +637,7 @@ touch /opt/viacrm/shared/host-ready
             "ReleaseBucket": {"Value": REF("ReleaseBucket")},
             "ApiRepository": {"Value": GET("ApiRepository", "RepositoryUri")},
             "WebRepository": {"Value": GET("WebRepository", "RepositoryUri")},
+            "IgbotRepository": {"Value": GET("IgbotRepository", "RepositoryUri")},
             "BackupBucket": {"Value": REF("BackupBucket")},
             "AlertTopic": {"Value": REF("AlertTopic")},
         },

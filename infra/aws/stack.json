@@ -208,6 +208,9 @@
                     },
                     {
                       "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/viacrm/web"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/viacrm/igbot"
                     }
                   ]
                 },
@@ -427,6 +430,9 @@
                     },
                     {
                       "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/viacrm/web"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/viacrm/igbot"
                     }
                   ]
                 },
@@ -800,6 +806,24 @@
           "LifecyclePolicyText": "{\"rules\": [{\"rulePriority\": 1, \"description\": \"Keep 20 release images\", \"selection\": {\"tagStatus\": \"any\", \"countType\": \"imageCountMoreThan\", \"countNumber\": 20}, \"action\": {\"type\": \"expire\"}}]}"
         }
       }
+    },
+    "IgbotRepository": {
+      "Type": "AWS::ECR::Repository",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "RepositoryName": "viacrm/igbot",
+        "ImageTagMutability": "IMMUTABLE",
+        "ImageScanningConfiguration": {
+          "ScanOnPush": true
+        },
+        "EncryptionConfiguration": {
+          "EncryptionType": "AES256"
+        },
+        "LifecyclePolicy": {
+          "LifecyclePolicyText": "{\"rules\": [{\"rulePriority\": 1, \"description\": \"Keep 20 release images\", \"selection\": {\"tagStatus\": \"any\", \"countType\": \"imageCountMoreThan\", \"countNumber\": 20}, \"action\": {\"type\": \"expire\"}}]}"
+        }
+      }
     }
   },
   "Outputs": {
@@ -851,6 +875,14 @@
       "Value": {
         "Fn::GetAtt": [
           "WebRepository",
+          "RepositoryUri"
+        ]
+      }
+    },
+    "IgbotRepository": {
+      "Value": {
+        "Fn::GetAtt": [
+          "IgbotRepository",
           "RepositoryUri"
         ]
       }

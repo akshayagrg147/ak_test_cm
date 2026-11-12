@@ -15,12 +15,15 @@ FAKES = {
     "docker": r"""#!/bin/bash
 echo "docker $*" >> "$LOG"
 if [[ "$*" == *pg_dump* ]]; then printf 'PGDMP-fake-dump'; exit 0; fi
+if [[ "$1 $2" == "volume inspect" ]]; then [[ -n "${IGBOT_VOLUME:-}" ]]; exit; fi
 if [[ "$1" == run ]]; then
+    all="$*"
     while [[ $# -gt 0 ]]; do
         if [[ "$1" == -v && "$2" == *:/backup ]]; then target="${2%:/backup}"; fi
         shift
     done
-    printf 'files' > "$target/files.tar.gz"
+    if [[ "$all" == *viacrm_igbot_data* ]]; then printf 'bot' > "$target/igbot-data.tar.gz"
+    else printf 'files' > "$target/files.tar.gz"; fi
 fi
 """,
     "aws": r"""#!/bin/bash
@@ -107,6 +110,16 @@ class HostScripts(unittest.TestCase):
         self.assertIn("--project-name viacrm", dump)
         # Online backup: the CRM is never stopped for the daily copy.
         self.assertFalse(any(" stop " in c for c in self.commands()))
+
+    def test_instagram_bot_data_and_settings_are_backed_up_when_present(self):
+        (self.root / "shared/igbot.env").write_text("APP_SECRET=z\n")
+        result = self.run_script("backup.sh", "daily", IGBOT_VOLUME="1")
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        [folder] = list((self.root / "backups").glob("daily-*"))
+        files = json.loads((folder / "manifest.json").read_text())["files"]
+        self.assertIn("igbot-data.tar.gz", files)
+        self.assertIn("igbot.env", files)
+        self.assertEqual((folder / "igbot.env").stat().st_mode & 0o777, 0o600)
 
     def test_failed_upload_keeps_local_copy_and_reports_no_success(self):
         result = self.run_script("backup.sh", "daily", FAIL_UPLOAD="1")
@@ -215,6 +228,19 @@ class RecoveryInfrastructure(unittest.TestCase):
         self.assertNotIn("BackupBucket", host_role)
         self.assertNotIn("cloudwatch", host_role)
 
+    def test_instagram_bot_image_repository_matches_existing_repositories(self):
+        repo = self.resources["IgbotRepository"]
+        self.assertEqual(repo["Properties"]["RepositoryName"], "viacrm/igbot")
+        self.assertEqual(repo["Properties"]["ImageTagMutability"], "IMMUTABLE")
+        self.assertEqual(repo["DeletionPolicy"], "Retain")
+        arn = {"Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/viacrm/igbot"}
+        host = self.resources["HostRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+        pull = next(s for s in host if isinstance(s.get("Resource"), list) and arn in s["Resource"])
+        self.assertNotIn("ecr:PutImage", pull["Action"])
+        deploy = self.resources["DeployRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+        push = next(s for s in deploy if isinstance(s.get("Resource"), list) and arn in s["Resource"])
+        self.assertIn("ecr:PutImage", push["Action"])
+
 
 class GuardedStackUpdate(unittest.TestCase):
     def change(self, logical, action="Add", replacement=None):
@@ -232,7 +258,12 @@ class GuardedStackUpdate(unittest.TestCase):
         # A newer Amazon Linux AMI would modify or replace the production server: refuse.
         problems = apply.unexpected_changes([*adds, self.change("Host", "Modify", "True")], "owner@example.com")
         self.assertEqual(problems, ["Modify Host (replacement: True)"])
+        # Adding the bot's image repository edits two role policies in place, never replacing them.
+        in_place = [self.change("DeployRole", "Modify", "False"), self.change("HostRole", "Modify", "False")]
+        self.assertEqual(apply.unexpected_changes([*adds, *in_place], "a@b.co"), [])
         self.assertTrue(apply.unexpected_changes([*adds, self.change("HostRole", "Modify")], "a@b.co"))
+        self.assertTrue(apply.unexpected_changes([*adds, self.change("HostRole", "Modify", "True")], "a@b.co"))
+        self.assertTrue(apply.unexpected_changes([*adds, self.change("Host", "Modify", "False")], "a@b.co"))
         self.assertIn(
             "expected new resource SiteDownAlarm is missing",
             apply.unexpected_changes([c for c in adds if "SiteDown" not in json.dumps(c)], "a@b.co"),

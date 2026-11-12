@@ -17,6 +17,8 @@ set +a
 [[ "$(basename "$release_dir")" == "$RELEASE_SHA" ]] || { echo 'Release path does not match commit'; exit 1; }
 python3 "$release_dir/host_config.py" --root "$deploy_root" --host "$PUBLIC_HOST"
 export DEPLOY_ROOT="$deploy_root"
+# The Instagram lead bot runs only once its private settings file exists on the host.
+if [[ -f "$deploy_root/shared/igbot.env" ]]; then export COMPOSE_PROFILES=igbot; else unset COMPOSE_PROFILES; fi
 install_schedule_files() {
     # Each step returns explicitly: set -e is ignored inside the caller's || list.
     install -d -m 700 "$deploy_root/bin" || return 1
@@ -36,14 +38,15 @@ install_schedules() {
 }
 compose() { docker compose --project-name viacrm --env-file "$deploy_root/shared/host.env" --env-file "$release_dir/images.env" -f "$release_dir/compose.yaml" "$@"; }
 previous_dir="$(readlink -f "$deploy_root/current" 2>/dev/null || true)"
+# Log in before the rerun check: a rerun may need to pull the optional bot image.
+aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY" >/dev/null
+trap 'docker logout "$ECR_REGISTRY" >/dev/null 2>&1 || true' EXIT
 if [[ "$previous_dir" == "$release_dir" ]]; then
     echo "Release $RELEASE_SHA is already current"
     compose up -d --wait --wait-timeout 240 --remove-orphans
     install_schedules
     exit 0
 fi
-aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY" >/dev/null
-trap 'docker logout "$ECR_REGISTRY" >/dev/null 2>&1 || true' EXIT
 compose config --quiet
 # Pull everything before interrupting the current application.
 compose pull

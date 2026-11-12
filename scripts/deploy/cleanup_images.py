@@ -12,12 +12,17 @@ def cleanup(root: Path):
         if path.exists():
             for line in path.read_text().splitlines():
                 key, _, value = line.partition("=")
-                if key in {"API_IMAGE", "WEB_IMAGE"}:
-                    image_id = subprocess.check_output(
+                if key in {"API_IMAGE", "WEB_IMAGE", "IGBOT_IMAGE"} and value:
+                    inspected = subprocess.run(
                         ["docker", "image", "inspect", "--format", "{{.Id}}", value],
+                        capture_output=True,
                         text=True,
-                    ).strip()
-                    retained.add(image_id)
+                    )
+                    # An optional service (the Instagram bot) may never have been pulled.
+                    if inspected.returncode == 0:
+                        retained.add(inspected.stdout.strip())
+                    elif key != "IGBOT_IMAGE":
+                        raise RuntimeError(f"Cannot inspect retained image {value}")
     candidates = subprocess.check_output(
         [
             "docker",

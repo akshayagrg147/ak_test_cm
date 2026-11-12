@@ -29,3 +29,7 @@ artifacts/
 *.apk
 *.aab
 release.tar.gz
+
+# Instagram lead bot: real settings and runtime data never enter Git
+services/igbot/.env
+services/igbot/data/

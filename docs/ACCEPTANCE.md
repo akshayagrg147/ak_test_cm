@@ -1317,3 +1317,19 @@ the bot enabled.
 - **Restore drill.** The operator session downloaded only `database.dump`, `files.tar.gz` and `manifest.json` (not the secret env copies), and both SHA-256 hashes matched. Restored into a throwaway local PostgreSQL 17.6 cluster with `pg_restore --exit-on-error --no-owner`: revision `0010`, 38 tables, 1 organization, 3 users, 0 leads and 1 subscription, matching the live super-admin view. The file archive was empty because no production uploads exist yet. The cluster and downloaded data were deleted afterwards.
 - `BackupMissingAlarm` entered ALARM before the first backup existed (missing data counts as failure); it re-evaluates hourly.
 - The Instagram bot image is in ECR and the `/ig-webhook` route returns 502 until the owner creates `shared/igbot.env` and the release is rerun.
+
+### Bot enabled and pending items checked on production — 12 November 2026
+
+- **Settings file.** The owner created `shared/igbot.env` through Session Manager (root, `0600`, 13 settings, no `PORT`). Only setting names and empty/set status were inspected, never values. `ANTHROPIC_API_KEY` and `SHEET_WEBHOOK_URL` are empty, so replies use keyword rules and there is no sheet copy. The bot runs with `DRY_RUN=False`.
+- **Release `854a5b9`, deploy job rerun (run 43252903901, attempt 2).** All jobs passed. `/release.json` matches; health is `ok` on the domain and `/api/health` is 200 on the IP.
+- **Bot on the live domain:**
+  - `/ig-webhook/health` returns 200.
+  - Verification with a wrong token returns 403. An unsigned POST and a forged signature return 403.
+  - A 1.2 MB body returns 413. www and IP aliases redirect with 308.
+  - Memory use is 23 MiB of its 128 MiB limit.
+- **Meta delivery.** Meta verification succeeded at 17:14 UTC, and three signed Instagram events were accepted at 17:17 UTC with no errors. None was a text DM, so the DM → reply → ViaCRM lead path is **not yet verified** with a real message.
+- **Daily backup.** Run on demand with `systemctl start viacrm-backup.service`. It uploaded `daily/daily-20261112T172213Z` (121,948 bytes). Both timers are listed: monitor every 5 minutes, backup daily around 21:30 UTC.
+- **Alarms.** All five are `OK`, including `BackupMissingAlarm`.
+- **Host headroom.** About 1.0 GB of memory is available and the disk is 13% used.
+- **Read-only load check.** From the operator's Mac (India), 20 concurrent clients made 1,200 GETs across `/api/health`, `/`, `/login` and `/release.json`. All 1,200 returned 200 at about 99 requests/s. Median was about 175 ms, p95 under 400 ms, max 903 ms. Health remained `ok`. Authenticated and write paths were not load-tested.
+- **Not verified.** No Android phone or emulator is attached, so the APK was not exercised on a device; its source is unchanged by this work. Website and Google Ads lead capture still have only test-suite coverage, with no real external deliveries.

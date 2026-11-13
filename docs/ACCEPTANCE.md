@@ -1317,3 +1317,20 @@ the bot enabled.
 - **Restore drill.** The operator session downloaded only `database.dump`, `files.tar.gz` and `manifest.json` (not the secret env copies), and both SHA-256 hashes matched. Restored into a throwaway local PostgreSQL 17.6 cluster with `pg_restore --exit-on-error --no-owner`: revision `0010`, 38 tables, 1 organization, 3 users, 0 leads and 1 subscription, matching the live super-admin view. The file archive was empty because no production uploads exist yet. The cluster and downloaded data were deleted afterwards.
 - `BackupMissingAlarm` entered ALARM before the first backup existed (missing data counts as failure); it re-evaluates hourly.
 - The Instagram bot image is in ECR and the `/ig-webhook` route returns 502 until the owner creates `shared/igbot.env` and the release is rerun.
+
+## SEO pass (branch `worktree-seo-pass`, not deployed) — 14 November 2026
+
+These are on-page SEO changes. See `docs/seo/seo-report.md` for details. The
+backlink plan in `docs/seo/backlinks.md` has drafts only; nothing was submitted.
+
+| Check | Executed result |
+| --- | --- |
+| `npm run lint` | pass |
+| `npm run build` (Node 24.11.1) | pass. Static pages, `robots.txt`, `sitemap.xml`, `404.html` and the OG/logo PNGs are in `dist/` |
+| `nginx -t` in `nginx:1.28-alpine` with the built `dist/` | pass |
+| curl matrix against that container | `/` 200; `/login`, `/app`, `/app/*`, `/enquiry/*` 200 with `X-Robots-Tag: noindex, nofollow`; `/robots.txt` text/plain; `/sitemap.xml` text/xml; `/real-estate-crm` 301 to `/real-estate-crm/` (relative); unknown paths 404 with `404.html`; CSP still present |
+| Static pages in the browser | 7 pages + 404: one H1 each, JSON-LD parses, canonical present, no horizontal scroll at 375 px |
+| `scripts/test_browser.py --production tests/branding.spec.ts tests/crm.spec.ts -g "public\|responsive\|branding"` | **5 passed** |
+
+Not verified: production deployment, Google rendering, and the Rich Results
+Test. The full Playwright suite was not run.

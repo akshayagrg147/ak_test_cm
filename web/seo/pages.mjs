@@ -14,11 +14,26 @@ export const SITE = {
   // Fill these once the owner publishes them on the homepage too.
   phone: "",
   email: "",
+  // Sales WhatsApp number with country code, digits only (e.g. "91XXXXXXXXXX").
+  // When set, every landing page shows a "free demo / 14-day trial" WhatsApp
+  // button. This is a contact link only: ViaCRM has no WhatsApp feature.
+  whatsapp: "",
 };
+
+const whatsappText =
+  "Hi, mujhe ViaCRM ka free demo aur 14 din ka free trial chahiye.";
+const whatsappLink = SITE.whatsapp
+  ? `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(whatsappText)}`
+  : "";
 
 const cta = `
 <div class="cta">
-  <a class="button" href="${SITE.instagram}" rel="noopener">Message us on Instagram</a>
+  ${
+    whatsappLink
+      ? `<a class="button" href="${whatsappLink}" rel="noopener">WhatsApp: free demo / 14 din free trial</a>
+  <a class="button ghost" href="${SITE.instagram}" rel="noopener">Message us on Instagram</a>`
+      : `<a class="button" href="${SITE.instagram}" rel="noopener">Message us on Instagram</a>`
+  }
   <a class="button ghost" href="/">See the full platform</a>
 </div>`;
 

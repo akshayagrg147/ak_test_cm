@@ -6062,8 +6062,10 @@ th {
   color: var(--muted);
 }
 /* Public price line under the homepage calls to action. */
-.price-line {
+.hero-copy > p.price-line,
+.contact-section > p.price-line {
   font-weight: 600;
   font-size: var(--text-small);
-  margin-top: 16px;
+  line-height: 1.5;
+  margin: 18px auto 0;
 }

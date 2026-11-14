@@ -6061,3 +6061,9 @@ th {
 .public-footer-links a {
   color: var(--muted);
 }
+/* Public price line under the homepage calls to action. */
+.price-line {
+  font-weight: 600;
+  font-size: var(--text-small);
+  margin-top: 16px;
+}

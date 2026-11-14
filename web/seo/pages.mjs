@@ -4,7 +4,7 @@
 //
 // Keep every claim true to the shipped product. WhatsApp is not a ViaCRM
 // feature; do not add WhatsApp claims. Do not publish prices here unless the
-// owner provides them.
+// owner provides them. The owner confirmed "From ₹399/user/month" on 14 Nov 2026.
 
 export const SITE = {
   origin: "https://viacrm.in",
@@ -35,7 +35,8 @@ const cta = `
       : `<a class="button" href="${SITE.instagram}" rel="noopener">Message us on Instagram</a>`
   }
   <a class="button ghost" href="/">See the full platform</a>
-</div>`;
+</div>
+<p class="price-line">From ₹399/user/month · 14 din free trial · setup + Excel import free</p>`;
 
 export const pages = [
   {

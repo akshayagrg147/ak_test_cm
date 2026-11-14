@@ -134,7 +134,7 @@ function render(p) {
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#264edb">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=viacrm-1">
-<link rel="stylesheet" href="/site/site.css?v=1">
+<link rel="stylesheet" href="/site/site.css?v=2">
 <meta property="og:type" content="${p.type === "article" ? "article" : "website"}">
 <meta property="og:site_name" content="ViaCRM">
 <meta property="og:locale" content="en_IN">
@@ -205,7 +205,7 @@ writeFileSync(
 <title>Page not found | ViaCRM</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=viacrm-1">
-<link rel="stylesheet" href="/site/site.css?v=1">
+<link rel="stylesheet" href="/site/site.css?v=2">
 </head>
 <body>
 ${header}

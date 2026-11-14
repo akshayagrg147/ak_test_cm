@@ -272,6 +272,10 @@ function usePublicConfig() {
 const PUBLIC_DESCRIPTION =
   "ViaCRM is a real estate CRM for Indian brokers and agencies: capture leads from your website, Google Ads, IndiaMART and Justdial, run telecalling with call recordings, and manage site visits and bookings.";
 const INSTAGRAM_URL = "https://www.instagram.com/viacrm91/";
+// Owner-confirmed public price (14 Nov 2026). Keep the temporary Founding
+// offer off the site.
+const PRICE_LINE =
+  "From ₹399/user/month · 14 din free trial · setup + Excel import free";
 // Static, crawlable pages served by nginx outside the SPA router, so they are
 // plain links rather than <Link>.
 const SEO_LINKS = [
@@ -383,6 +387,7 @@ function PublicSite() {
                 Explore the platform <ArrowRight size={16} />
               </a>
             </div>
+            <p className="price-line">{PRICE_LINE}</p>
             <div className="hero-note">
               <ShieldCheck size={17} />
               Your process. Your identity. Room to grow.
@@ -661,6 +666,7 @@ function PublicSite() {
             We’ll take it from there.
           </h2>
           <p>A conversation is the first step towards a CRM that fits.</p>
+          <p className="price-line">{PRICE_LINE}</p>
           {q.isError ? (
             <ErrorBox error={q.error} retry={() => void q.refetch()} />
           ) : !config ? (

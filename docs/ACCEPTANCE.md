@@ -1390,3 +1390,14 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
   - Every main admin screen (dashboard, leads, properties, visits, bookings, overview, onboarding, inbox) loads. A caller sees only assigned leads and can open lead history.
   - Reset removes an edited record and rebuilds the data. Logins and passwords stay, and the other test company is unchanged. A second create is refused, and so is a create when a login phone belongs to someone else.
 - Full backend suite: **303 passed**. `ruff check app tests` passes.
+
+### Price line (ViaCRM 5) and Demo Realty recordings — 14 November 2026
+
+- **Price line, release 6befe1b** (deployed by the SEO session with the owner's approval).
+  - CI run 43567135948 passed every job including deploy. `/release.json` matched and health was ok.
+  - "From ₹399/user/month · 14 din free trial · setup + Excel import free" is on the homepage and the four landing pages, and the Offer is in the JSON-LD. Verified live with curl.
+- **Demo seed.** Callback times changed so both demo callers get overdue and upcoming callbacks; before, only one caller had overdue callbacks. `tests/test_demo_realty.py` still passes. This applies to production only after the next release plus `demo_realty reset`.
+- **Recordings.**
+  - Six section videos for the Hindi demo were recorded with Playwright from a throwaway local stack (database `viacrm_demo_rec_test`, dropped afterwards), never production.
+  - The fictional call used the normal device sync and recording-upload APIs.
+  - Every clip was checked frame by frame: the auto-assign alert, the overdue-callback filter, the recording player, the requirement matches, the visit-clash error, the early-attended visit outcome, the booking and the dashboard periods.

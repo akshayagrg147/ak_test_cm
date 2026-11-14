@@ -154,7 +154,7 @@ def _records(db, org):
         city, locality = LOCALITIES[i % len(LOCALITIES)]
         follow = None
         if stage in {"qualified", "site_visit", "proposal"}:
-            follow = stamp + timedelta(hours=(i % 5) * 6 - 9)  # some overdue, some later today/tomorrow
+            follow = stamp + timedelta(hours=(i % 4) * 8 - 10)  # both callers get overdue and upcoming callbacks
         lead = Lead(
             org_id=org.id, name=f"{FIRST[i]} {LAST[i % len(LAST)]}", phone=f"+9190000{10001 + i:05}",
             city=city, source=source, stage=stage, owner_id=owner.id if owner else None,

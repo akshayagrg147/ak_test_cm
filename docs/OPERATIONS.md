@@ -100,3 +100,25 @@ Use a separate Compose project, its own generated secret file, an override bindi
 ```
 
 The smoke script refuses a non-development environment or a project not prefixed `aven-`. It checks the built frontend, proxy headers, login cookie, creates an isolated QA organization, uploads a private image, restarts API/worker/web, verifies refresh/database/file persistence, revokes its session and archives only its own QA organization. It never targets the reference services. Browser tests accept `E2E_BASE_URL`, `E2E_BROWSER` (chromium/firefox), and `E2E_ARTIFACT_DIR`.
+
+## Demo Realty prospect workspace
+
+`backend/app/demo_realty.py` keeps a fictional real-estate company (fixed id
+`4dd1208e-e761-40a9-866d-ae39c4bdd50a`) for prospects. It contains 30 leads, 10 properties, 5 site
+visits, one booking and four logins: admin `+919000000901`, callers `+919000000902` and
+`+919000000903`, and field executive `+919000000904`. All names, numbers, projects and amounts are
+invented, and every record says so. The logins start with an unusable random password. Set real
+ones before sharing: the admin in Super admin, the callers on the company's Team page.
+
+On the host, from the current release:
+
+```bash
+sudo docker compose --project-name viacrm --env-file /opt/viacrm/shared/host.env \
+  --env-file /opt/viacrm/current/images.env -f /opt/viacrm/current/compose.yaml \
+  exec -T api python -m app.demo_realty create   # once
+# ... same command with "reset" to replace edited demo records; logins and passwords stay
+```
+
+`reset` deletes and recreates only this organization's records; every other company is untouched.
+It refuses to run if that id belongs to a differently named company. The demo uses a non-billed
+"Demo workspace" subscription with 10 seats, so it never shows trial countdowns.

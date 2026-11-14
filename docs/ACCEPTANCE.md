@@ -1381,3 +1381,12 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
   - Six signed DMs (DEMO, name, team size, sources, tool, price) moved the chat to `done`, created a lead and took the pricing path.
 - **CSV header fix.** The `leads.csv` column order changed. The bot session's follow-up `notify.py` (SHA-256 `311079d3…`) renames an old-header file to `leads-old-<unix>.csv` and starts a new one. Locally tested with an old-format file: old rows were kept and the new row was written under the new header.
 - **Not verified.** Production replies and the ViaCRM capture push with real settings.
+
+### Demo Realty seed — 14 November 2026
+
+- `python -m app.demo_realty create|reset` adds a fictional real-estate workspace for prospects.
+- `tests/test_demo_realty.py` passes 2 tests:
+  - Create gives 30 leads, 10 properties, 5 visits, 1 booking and 4 logins. Logins don't work until passwords are set.
+  - Every main admin screen (dashboard, leads, properties, visits, bookings, overview, onboarding, inbox) loads. A caller sees only assigned leads and can open lead history.
+  - Reset removes an edited record and rebuilds the data. Logins and passwords stay, and the other test company is unchanged. A second create is refused, and so is a create when a login phone belongs to someone else.
+- Full backend suite: **303 passed**. `ruff check app tests` passes.

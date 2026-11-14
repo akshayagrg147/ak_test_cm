@@ -1367,3 +1367,16 @@ Commit `6d238fa` (SEO session) was merged onto `claude/backup-upload-fix`. The o
   - CSP and nosniff are present on the static pages, and `/site/` sets a 7-day cache.
 - **Static link check.** No broken absolute links in `dist`.
 - **Browser.** `scripts/test_browser.py --production`: **90 passed** (disposable services; the database was removed).
+
+### Instagram bot texts and leads page (ViaCRM 3 update) — 14 November 2026
+
+Akshay approved the texts in the bot session. The seven files from `~/insta-lead-agent/deploy-2026-11-14/` were copied into `services/igbot/` after their SHA-256 sums matched. The Dockerfile and requirements are unchanged.
+
+- **Review.**
+  - `GET /ig-webhook/leads` answers 401 unless `LEADS_VIEW_PASSWORD` is set and matches, using a constant-time comparison. Output is HTML-escaped and sent with `Cache-Control: no-store`.
+  - The SQLite `lead_sources` column is added in place.
+  - CRM capture still uses the website channel; the body's `source` is ignored by the CRM.
+- **Local container smoke test** (DRY_RUN, test secrets):
+  - `/ig-webhook/health` returns 200. The leads page returns 401 without auth and 401 with a wrong password; with the right password it returns 200 and lists a lead created by the previous `store.py`, so the column migration keeps old rows.
+  - Six signed DMs (DEMO, name, team size, sources, tool, price) moved the chat to `done`, created a lead and took the pricing path.
+- **Not verified.** Production replies and the ViaCRM capture push with real settings. The `leads.csv` column order changed, so an existing file on the host would have mismatched headers for new rows.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 
@@ -12,7 +13,8 @@ import store
 import texts as T
 
 log = logging.getLogger("flow")
-REQUIRED = {"name", "whatsapp", "team_size", "demo_time"}  # current_tool may be skipped
+REQUIRED = {"name", "team_size"}  # lead_sources / current_tool may be skipped
+SKIPPABLE = ("lead_sources", "current_tool")
 PRIVATE_REPLY_COOLDOWN = 24 * 3600
 
 
@@ -25,8 +27,8 @@ def _valid(field: str, value) -> str | None:
     if field == "whatsapp":
         digits = re.sub(r"\D", "", v)[-10:]
         return digits if re.fullmatch(r"[6-9]\d{9}", digits) else None
-    if field == "team_size":
-        return v if re.search(r"\d", v) else None
+    if field == "team_size":  # 1-4 digits; a phone number is not a team size
+        return v if re.search(r"(?<!\d)\d{1,4}(?!\d)", v) else None
     if field == "name":
         return v[:60] if not re.search(r"\d", v) else None
     return v[:120]
@@ -34,7 +36,7 @@ def _valid(field: str, value) -> str | None:
 
 def _merge(conv: dict, details: brain.Details) -> list[str]:
     got = []
-    for f in store.FIELDS:
+    for f in store.LEAD_COLS:  # also keeps a phone number if they volunteer one
         val = _valid(f, getattr(details, f))
         if val and not conv["details"].get(f):
             conv["details"][f] = val
@@ -47,6 +49,19 @@ def _next_field(conv: dict) -> str | None:
         if not conv["details"].get(f):
             return f
     return None
+
+
+def wa_link() -> str | None:
+    """wa.me link to Akshay's WhatsApp Business number (WA_NUMBER in .env, e.g. 9198XXXXXXXX), text pre-filled."""
+    n = re.sub(r"\D", "", os.getenv("WA_NUMBER", ""))
+    if len(n) == 10:
+        n = "91" + n
+    return f"https://wa.me/{n}?text=DEMO" if len(n) == 12 else None
+
+
+def _done_text(conv: dict) -> str:
+    link = wa_link()
+    return T.ALREADY_DONE.format(wa_link=link) if link else T.ALREADY_DONE_NO_WA
 
 
 def _faq(topic: str) -> str | None:
@@ -63,11 +78,10 @@ def _handoff(conv: dict, text: str) -> str:
 def _complete(conv: dict, source: str) -> str:
     conv["state"], conv["expected"] = "done", None
     row = store.add_lead(conv, source)
-    d = {k: (v or "-") for k, v in row.items()}
-    if d["current_tool"] == "skip":
-        d["current_tool"] = "-"
+    d = {k: ("-" if v in (None, "", "skip") else v) for k, v in row.items()}
     notify.push("lead", row, T.NOTIFY_LEAD.format(**d))
-    return T.LEAD_DONE.format(name=conv["details"]["name"].split()[0], demo_time=conv["details"]["demo_time"])
+    name, link = conv["details"]["name"].split()[0], wa_link()
+    return T.LEAD_DONE.format(name=name, wa_link=link) if link else T.LEAD_DONE_NO_WA.format(name=name)
 
 
 def _ask_next(conv: dict, source: str) -> str:
@@ -81,6 +95,10 @@ def _ask_next(conv: dict, source: str) -> str:
 
 def decide(conv: dict, text: str, source: str = "dm") -> tuple[list[str], dict]:
     """Returns (reply_parts, debug). Mutates conv; caller saves it."""
+    if conv["state"] == "collecting" and conv.get("expected") not in T.ASK:  # chat started before the flow changed
+        conv["expected"] = _next_field(conv)
+        if conv["expected"] is None:
+            conv["state"] = "new"
     expected = conv.get("expected") if conv["state"] == "collecting" else None
     u, engine = brain.understand(text, expected, source)
     dbg = {"engine": engine, "intent": u.intent, "topic": u.faq_topic}
@@ -108,9 +126,9 @@ def decide(conv: dict, text: str, source: str = "dm") -> tuple[list[str], dict]:
         if u.intent == "not_interested":
             conv["state"], conv["expected"] = "closed", None
             return [T.NOT_INTERESTED], dbg
-        if expected == "current_tool" and not conv["details"].get("current_tool") and re.search(r"(?i)\bskip\b", text):
-            conv["details"]["current_tool"] = "skip"
-            got.append("current_tool")
+        if expected in SKIPPABLE and not conv["details"].get(expected) and re.search(r"(?i)\bskip\b", text):
+            conv["details"][expected] = "skip"
+            got.append(expected)
         if expected in got or (got and expected not in REQUIRED):
             return [_ask_next(conv, source)], dbg
         if got:  # gave other details but not the one asked
@@ -128,7 +146,7 @@ def decide(conv: dict, text: str, source: str = "dm") -> tuple[list[str], dict]:
         if ans:
             return [ans], dbg
         if u.intent in ("interested", "greeting"):
-            return [T.ALREADY_DONE], dbg
+            return [_done_text(conv)], dbg
         return [], dbg
 
     # new / closed / paused
@@ -209,8 +227,12 @@ def on_comment(comment_id: str, user_id: str, username: str, text: str) -> dict:
         out["public"] = T.COMMENT_PUBLIC_INTERESTED.format(username=username)
     meta.reply_comment(comment_id, out["public"])
     if out["public"].endswith("📩") and "DM kiya" in out["public"]:
-        answer = _faq(u.faq_topic) or T.COMMENT_DEFAULT_ANSWER
-        out["private"] = T.COMMENT_PRIVATE_OPENER.format(answer=answer)
+        if u.intent == "interested" and u.faq_topic in ("none", "features") and _next_field(conv):
+            q = _ask_next(conv, "comment")  # straight into the 3 qualifying questions
+            out["private"] = T.COMMENT_PRIVATE_DEMO.format(start=T.START_COLLECT, question=q)
+        else:
+            answer = _faq(u.faq_topic) or T.COMMENT_DEFAULT_ANSWER
+            out["private"] = T.COMMENT_PRIVATE_OPENER.format(answer=answer)
         meta.private_reply(comment_id, out["private"])
         conv["details"]["_private_at"] = time.time()
         store.log_msg(user_id, "out", out["private"])

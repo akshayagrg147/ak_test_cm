@@ -9,7 +9,8 @@ from pathlib import Path
 
 DB_PATH = Path(os.getenv("DB_PATH", Path(__file__).with_name("data") / "agent.db"))
 
-FIELDS = ["name", "whatsapp", "team_size", "current_tool", "demo_time"]
+FIELDS = ["name", "team_size", "lead_sources", "current_tool"]  # the 3 qualifying questions (playbook Script B) + name
+LEAD_COLS = ["name", "whatsapp", "team_size", "lead_sources", "current_tool", "demo_time"]
 
 
 def _conn() -> sqlite3.Connection:
@@ -31,6 +32,8 @@ def _conn() -> sqlite3.Connection:
           id integer primary key autoincrement, igsid text, direction text, text text, at real);
         """
     )
+    if "lead_sources" not in [r[1] for r in c.execute("pragma table_info(leads)")]:
+        c.execute("alter table leads add column lead_sources text")
     return c
 
 
@@ -66,12 +69,13 @@ def first_seen(key: str) -> bool:
 
 def add_lead(conv: dict, source: str) -> dict:
     d = conv["details"]
-    row = {"igsid": conv["igsid"], "username": conv.get("username") or "", **{f: d.get(f, "") for f in FIELDS},
+    row = {"igsid": conv["igsid"], "username": conv.get("username") or "", **{f: d.get(f, "") for f in LEAD_COLS},
            "source": source, "created": time.time()}
     with _conn() as c:
         c.execute(
-            "insert into leads(igsid, username, name, whatsapp, team_size, current_tool, demo_time, source, created)"
-            " values(:igsid,:username,:name,:whatsapp,:team_size,:current_tool,:demo_time,:source,:created)", row)
+            "insert into leads(igsid, username, name, whatsapp, team_size, lead_sources, current_tool, demo_time,"
+            " source, created) values(:igsid,:username,:name,:whatsapp,:team_size,:lead_sources,:current_tool,"
+            ":demo_time,:source,:created)", row)
     return row
 
 

@@ -21,7 +21,8 @@ import store  # noqa: E402
 cmd = sys.argv[1] if len(sys.argv) > 1 else ""
 if cmd == "leads":
     for l in store.leads():
-        print(f"{l['id']:>3}  {l['name']:<20} {l['whatsapp']:<11} team {l['team_size']:<4} {l['current_tool']:<10} {l['demo_time']:<20} @{l['username']}")
+        g = lambda k: str(l.get(k) or "-")
+        print(f"{l['id']:>3}  {g('name'):<20} @{g('username'):<20} team {g('team_size'):<4} from: {g('lead_sources'):<25} kept in: {g('current_tool')}")
 elif cmd == "paused":
     for p in store.paused():
         print(p["igsid"], "@" + (p["username"] or "?"))

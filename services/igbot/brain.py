@@ -30,7 +30,8 @@ Intent = Literal[
 ]
 Topic = Literal[
     "features", "enquiry", "matching", "followup", "inventory", "site_visit",
-    "booking", "customize", "who_for", "pricing", "access", "unknown", "none",
+    "booking", "customize", "who_for", "pricing", "access", "whatsapp", "data_safety", "excel",
+    "unknown", "none",
 ]
 
 
@@ -38,7 +39,8 @@ class Details(BaseModel):
     name: Optional[str] = None
     whatsapp: Optional[str] = Field(None, description="10-digit Indian mobile, digits only")
     team_size: Optional[str] = None
-    current_tool: Optional[str] = None
+    lead_sources: Optional[str] = Field(None, description="where their leads come from: portals, IndiaMART, ads, walk-in")
+    current_tool: Optional[str] = Field(None, description="where they keep leads today: Excel, diary, WhatsApp, a CRM")
     demo_time: Optional[str] = None
 
 
@@ -64,6 +66,9 @@ ViaCRM features (the only things the bot can answer about):
 - who_for: who it is for
 - pricing: price, cost, plans, kitna
 - access: link, login, trial, app download, how to get it
+- whatsapp: does it connect / integrate / sync with WhatsApp
+- data_safety: is my data safe, secure, private, who can see it, hacking
+- excel: "Excel se kaam chal raha hai", why switch from Excel/sheets/diary
 If they ask something not covered (integrations, mobile app specifics, data import, refunds, a complaint…) \
 use faq_topic "unknown" and intent "human".
 
@@ -79,8 +84,10 @@ Intent rules:
 - thanks: thanks, praise, emoji-only, "nice".
 - off_topic: spam, promotions, unrelated.
 Extract any details present anywhere in the message (name, 10-digit whatsapp digits only, team size, \
-current tool such as Excel/register/other CRM, preferred demo time in their words). Leave unknown fields null. \
-If expected_field is "current_tool" and they say skip/nahi, set current_tool to "skip"."""
+lead_sources such as 99acres/MagicBricks/IndiaMART/Justdial/FB ads/walk-in, current_tool = where they keep leads \
+today such as Excel/diary/WhatsApp/other CRM). Leave unknown fields null. \
+If expected_field is "current_tool" or "lead_sources" and they say skip/nahi, set that field to "skip". \
+When expected_field is "current_tool", an answer like "Excel" or "WhatsApp" is an answer, not a question."""
 
 
 class _LLM:
@@ -132,7 +139,14 @@ def _has(t: str, words) -> bool:
 PHONE_RE = re.compile(r"(?:\+?91[\s-]?|0)?([6-9]\d{4}[\s-]?\d{5})")
 
 TOPIC_WORDS = [
-    ("pricing", ["price", "pricing", "cost", "kitna", "kitne ka", "rate", "charges", "plan", "plans", "fees", "कीमत", "कितना", "प्राइस"]),
+    ("whatsapp", [r"whatsapp (se|ke saath|ke sath|integration|integrate|sync|connect)\w*", r"whatsapp (pe|par) (chalta|kaam)",
+                  r"(connect|integrate|sync)\w* (with |to )?whatsapp"]),
+    ("data_safety", ["safe", "secure", "security", "hack", "hacked", "privacy", "private", "data chori", "surakshit",
+                     "data kaun", "data kahan", "data leak"]),
+    ("excel", [r"excel (se|me|mein|pe|hi) (kaam|chal)\w*", r"(sheet|diary|register) (se|me|mein) (kaam|chal)\w*",
+               r"excel (kaafi|kafi|theek|thik)", "excel hi"]),
+    ("pricing", ["price", "pricing", "cost", "kitna", "kitne ka", "rate", "charges", "plan", "plans", "fees", "mehenga",
+                 "mehnga", "costly", "expensive", "कीमत", "कितना", "प्राइस"]),
     ("access", ["link", "login", "trial", "download", "app", "website", "kaise milega", "kahan milega"]),
     ("matching", ["match", "matching", "budget", "location"]),
     ("followup", ["follow", "followup", "follow-up", "reminder", "remind"]),
@@ -182,8 +196,9 @@ def rules(text: str, expected_field: str | None) -> Understanding:
             if n:
                 d.team_size = n.group(0)
             return Understanding(intent="answer", details=d)
-        if expected_field == "current_tool":
-            d.current_tool = "skip" if _has(t, ["skip", "nahi", "no", "nothing"]) else text.strip()[:80]
+        if expected_field in ("current_tool", "lead_sources"):
+            v = "skip" if _has(t, ["skip", "nahi", "no", "nothing", "pata nahi"]) else text.strip()[:120]
+            setattr(d, expected_field, v)
             return Understanding(intent="answer", details=d)
         if expected_field == "demo_time":
             d.demo_time = text.strip()[:80]

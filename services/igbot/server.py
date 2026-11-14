@@ -3,13 +3,16 @@
   GET  /webhook  -> Meta verification (hub.challenge)
   POST /webhook  -> events, signature-checked with APP_SECRET
   GET  /health   -> ok
+  GET  /leads    -> daily lead list for Akshay (browser login: any user name + LEADS_VIEW_PASSWORD)
 
 Run:  .venv/bin/python server.py      (PORT from .env, default 8080)
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import html
 import json
 import logging
 import os
@@ -91,10 +94,49 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body.encode())
 
+    def _leads_page(self):
+        pw = os.getenv("LEADS_VIEW_PASSWORD", "")
+        auth = self.headers.get("Authorization", "")
+        ok = False
+        if pw and auth.startswith("Basic "):
+            try:
+                ok = hmac.compare_digest(base64.b64decode(auth[6:]).decode().split(":", 1)[1], pw)
+            except Exception:
+                ok = False
+        if not ok:
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="ViaCRM leads"')
+            self.end_headers()
+            return
+        from datetime import datetime, timedelta, timezone
+        ist = timezone(timedelta(hours=5, minutes=30))
+        e = lambda v: html.escape("-" if v in (None, "", "skip") else str(v))
+        rows = "".join(
+            f"<tr><td>{datetime.fromtimestamp(l['created'] or 0, ist):%d %b %H:%M}</td><td>{e(l['name'])}</td>"
+            f"<td>@{e(l['username'])}</td><td>{e(l['team_size'])}</td><td>{e(l.get('lead_sources'))}</td>"
+            f"<td>{e(l['current_tool'])}</td><td>{e(l['whatsapp'])}</td></tr>"
+            for l in reversed(store.leads()))
+        waiting = "".join(f"<li>@{e(c['username'])} ({e(c['igsid'])})</li>" for c in store.paused())
+        page = (
+            "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+            "<title>ViaCRM IG leads</title><style>body{font:14px system-ui;margin:16px}table{border-collapse:collapse}"
+            "td,th{border:1px solid #ccc;padding:6px;text-align:left}</style>"
+            "<h2>Instagram leads (newest first)</h2><table><tr><th>When (IST)</th><th>Name</th><th>Instagram</th>"
+            "<th>Team</th><th>Leads from</th><th>Leads kept in</th><th>Phone</th></tr>" + rows + "</table>"
+            "<h3>Chats waiting for you (bot paused)</h3><ul>" + (waiting or "<li>none</li>") + "</ul>")
+        body = page.encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         u = urlparse(self.path)
         if u.path in ("/health", "/ig-webhook/health"):
             return self._send(200)
+        if u.path in ("/leads", "/ig-webhook/leads"):
+            return self._leads_page()
         if u.path in WEBHOOK_PATHS:
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if q.get("hub.mode") == "subscribe" and q.get("hub.verify_token") == os.getenv("VERIFY_TOKEN"):

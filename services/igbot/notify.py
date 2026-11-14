@@ -12,7 +12,7 @@ from pathlib import Path
 
 log = logging.getLogger("notify")
 CSV = Path(__file__).with_name("data") / "leads.csv"
-COLS = ["type", "created", "username", "name", "whatsapp", "team_size", "current_tool", "demo_time", "source", "message"]
+COLS = ["type", "created", "username", "name", "team_size", "lead_sources", "current_tool", "whatsapp", "source", "message"]
 
 
 def push(kind: str, row: dict, summary: str) -> None:
@@ -47,13 +47,13 @@ def _push_viacrm(row: dict) -> None:
     url, token = os.getenv("VIACRM_CAPTURE_URL"), os.getenv("VIACRM_CAPTURE_TOKEN")
     if not url or not token or os.getenv("DRY_RUN", "1") != "0":
         return
-    tool = row.get("current_tool") or ""
+    v = lambda k: "-" if row.get(k) in (None, "", "skip") else row.get(k)
     body = {
         "id": f"ig-{row.get('igsid', '')}-{int(float(row.get('created') or 0))}",
         "name": row.get("name", ""),
         "phone": row.get("whatsapp", ""),
-        "message": (f"Instagram @{row.get('username') or '?'} | team size {row.get('team_size')} | "
-                    f"current tool {'-' if tool == 'skip' else tool} | demo time: {row.get('demo_time')}"),
+        "message": (f"Instagram @{v('username')} | team size {v('team_size')} | leads from: {v('lead_sources')} | "
+                    f"leads kept in: {v('current_tool')}"),
         "source": "instagram",
     }
     req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",

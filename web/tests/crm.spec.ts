@@ -40,7 +40,7 @@ test("public site, interactive preview, FAQ and truthful contact setup", async (
     ),
   ).toBeVisible();
   await expect(page.locator("#contact")).toContainText(
-    "Contact details are being configured",
+    "Message us on Instagram",
   );
   await page.screenshot({
     path: screenshots + "/public-1440.png",
@@ -247,7 +247,7 @@ test("responsive pages stay within viewport at 360, 768 and 1440 pixels", async 
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator("#contact")).toContainText(
-      "Contact details are being configured",
+      "Message us on Instagram",
     );
     expect(
       await page.evaluate(

@@ -12,7 +12,9 @@ test("ViaCRM branding loads on public/login pages and remains readable at mobile
   page,
 }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle("ViaCRM — Every lead. A way forward.");
+  await expect(page).toHaveTitle(
+    "ViaCRM — Real Estate CRM for Indian Brokers & Agencies",
+  );
   await expect(page.locator(".public-nav .brand")).toHaveText("ViaCRM");
   await expect(
     page.getByText("VIACRM / WORKSPACE PREVIEW", { exact: true }),

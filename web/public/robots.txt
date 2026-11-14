@@ -1,0 +1,7 @@
+# ViaCRM — https://viacrm.in
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /api/
+
+Sitemap: https://viacrm.in/sitemap.xml

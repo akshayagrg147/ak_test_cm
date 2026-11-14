@@ -1,0 +1,257 @@
+/* Shared styles for ViaCRM's static marketing pages (no JavaScript). */
+:root {
+  --blue: #264edb;
+  --blue-dark: #1b3aa8;
+  --mint: #91ecd3;
+  --ink: #141a2e;
+  --muted: #4d5670;
+  --line: #e3e7f0;
+  --soft: #f5f7fc;
+  --bg: #ffffff;
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Noto Sans", "Noto Sans Devanagari", "Helvetica Neue", Arial, sans-serif;
+}
+a {
+  color: var(--blue);
+}
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}
+.wrap {
+  width: min(1080px, 100% - 32px);
+  margin: 0 auto;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+}
+.skip:focus {
+  left: 16px;
+  top: 8px;
+  background: #fff;
+  padding: 8px 12px;
+  z-index: 10;
+}
+header.site {
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+header.site .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 68px;
+  flex-wrap: wrap;
+}
+header.site nav {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 15px;
+}
+header.site nav a {
+  color: var(--ink);
+  text-decoration: none;
+}
+header.site nav a:hover {
+  color: var(--blue);
+}
+.brand img {
+  display: block;
+  height: 34px;
+  width: auto;
+}
+.crumbs {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 22px 0 0;
+}
+.crumbs a {
+  color: var(--muted);
+}
+.hero {
+  padding: 40px 0 36px;
+}
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+h1 {
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.15;
+  margin: 0 0 18px;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: clamp(23px, 3.2vw, 31px);
+  line-height: 1.25;
+  margin: 48px 0 14px;
+  letter-spacing: -0.01em;
+}
+h3 {
+  font-size: 19px;
+  margin: 0 0 6px;
+}
+.lead {
+  font-size: 19px;
+  color: var(--muted);
+  max-width: 760px;
+}
+.cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.button {
+  display: inline-block;
+  background: var(--blue);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.button:hover {
+  background: var(--blue-dark);
+}
+.button.ghost {
+  background: #fff;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  background: #fff;
+}
+.card p {
+  margin: 0;
+  color: var(--muted);
+}
+.band {
+  background: var(--soft);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0 40px;
+  margin-top: 40px;
+}
+article.prose {
+  max-width: 760px;
+}
+.prose p,
+.prose li {
+  color: #2b3249;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 16px;
+}
+th,
+td {
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 8px;
+  vertical-align: top;
+}
+th {
+  background: var(--soft);
+}
+.table-scroll {
+  overflow-x: auto;
+}
+details {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+details p {
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.note {
+  border-left: 4px solid var(--mint);
+  background: var(--soft);
+  padding: 12px 16px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.related {
+  margin: 48px 0;
+}
+.related ul {
+  padding-left: 20px;
+}
+footer.site {
+  border-top: 1px solid var(--line);
+  padding: 32px 0 40px;
+  margin-top: 56px;
+  font-size: 15px;
+  color: var(--muted);
+}
+footer.site .cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+footer.site ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+footer.site li {
+  margin: 4px 0;
+}
+footer.site a {
+  color: var(--muted);
+}
+footer.site strong {
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+  .lead {
+    font-size: 17px;
+  }
+  header.site nav {
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+}

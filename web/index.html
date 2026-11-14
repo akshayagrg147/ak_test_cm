@@ -1,18 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=viacrm-1" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#264edb" />
+    <title>ViaCRM — Real Estate CRM for Indian Brokers &amp; Agencies</title>
     <meta
       name="description"
-      content="ViaCRM connects real-estate leads, property visits and follow-ups in one clear workspace."
+      content="ViaCRM is a real estate CRM for Indian brokers and agencies: capture leads from your website, Google Ads, IndiaMART and Justdial, run telecalling with call recordings, and manage site visits and bookings."
     />
-    <title>ViaCRM — Every lead. A way forward.</title>
+    <!-- The SPA serves this shell for /login and /app too; nginx marks those
+         noindex, so the canonical below only matters for the homepage. -->
+    <link rel="canonical" href="https://viacrm.in/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ViaCRM" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:url" content="https://viacrm.in/" />
+    <meta
+      property="og:title"
+      content="ViaCRM — Real Estate CRM for Indian Brokers & Agencies"
+    />
+    <meta
+      property="og:description"
+      content="Leads, telecalling, call recordings, site visits and bookings in one workspace for property dealers, brokers and agencies."
+    />
+    <meta property="og:image" content="https://viacrm.in/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="ViaCRM — real estate CRM for Indian brokers and agencies"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="ViaCRM — Real Estate CRM for Indian Brokers & Agencies"
+    />
+    <meta
+      name="twitter:description"
+      content="Leads, telecalling, call recordings, site visits and bookings in one workspace."
+    />
+    <meta name="twitter:image" content="https://viacrm.in/og-image.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://viacrm.in/#organization",
+            "name": "ViaCRM",
+            "url": "https://viacrm.in/",
+            "logo": "https://viacrm.in/logo-512.png",
+            "slogan": "Every lead. A way forward.",
+            "areaServed": "IN",
+            "sameAs": ["https://www.instagram.com/viacrm91/"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://viacrm.in/#website",
+            "name": "ViaCRM",
+            "url": "https://viacrm.in/",
+            "inLanguage": "en-IN",
+            "publisher": { "@id": "https://viacrm.in/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://viacrm.in/#software",
+            "name": "ViaCRM",
+            "url": "https://viacrm.in/",
+            "applicationCategory": "BusinessApplication",
+            "applicationSubCategory": "Real estate CRM",
+            "operatingSystem": "Web, Android",
+            "description": "Real estate CRM for Indian brokers and agencies: lead capture, telecalling with call recordings, site visits, property inventory and bookings.",
+            "featureList": [
+              "Lead capture from website forms, Google Ads lead forms, IndiaMART and Justdial",
+              "Telecaller queues, follow-ups and overdue call-back alerts",
+              "Android call sync with the phone's built-in call recordings",
+              "Property inventory and buyer matching",
+              "Site visits and field executive handoffs",
+              "Bookings and commissions",
+              "Role-based access and company branding"
+            ],
+            "publisher": { "@id": "https://viacrm.in/#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>ViaCRM — real estate CRM for Indian brokers and agencies</h1>
+      <p>
+        Please enable JavaScript to use the ViaCRM app. Learn more:
+        <a href="/real-estate-crm/">Real estate CRM</a> ·
+        <a href="/real-estate-lead-management/">Lead management</a> ·
+        <a href="/call-recording-crm/">Call recording CRM</a> ·
+        <a href="/blog/">Blog</a>
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

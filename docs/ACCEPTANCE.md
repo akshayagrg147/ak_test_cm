@@ -1333,3 +1333,20 @@ the bot enabled.
 - **Host headroom.** About 1.0 GB of memory is available and the disk is 13% used.
 - **Read-only load check.** From the operator's Mac (India), 20 concurrent clients made 1,200 GETs across `/api/health`, `/`, `/login` and `/release.json`. All 1,200 returned 200 at about 99 requests/s. Median was about 175 ms, p95 under 400 ms, max 903 ms. Health remained `ok`. Authenticated and write paths were not load-tested.
 - **Not verified.** No Android phone or emulator is attached, so the APK was not exercised on a device; its source is unchanged by this work. Website and Google Ads lead capture still have only test-suite coverage, with no real external deliveries.
+
+## SEO pass (branch `worktree-seo-pass`, not deployed) — 14 November 2026
+
+These are on-page SEO changes. See `docs/seo/seo-report.md` for details. The
+backlink plan in `docs/seo/backlinks.md` has drafts only; nothing was submitted.
+
+| Check | Executed result |
+| --- | --- |
+| `npm run lint` | pass |
+| `npm run build` (Node 24.11.1) | pass. Static pages, `robots.txt`, `sitemap.xml`, `404.html` and the OG/logo PNGs are in `dist/` |
+| `nginx -t` in `nginx:1.28-alpine` with the built `dist/` | pass |
+| curl matrix against that container | `/` 200; `/login`, `/app`, `/app/*`, `/enquiry/*` 200 with `X-Robots-Tag: noindex, nofollow`; `/robots.txt` text/plain; `/sitemap.xml` text/xml; `/real-estate-crm` 301 to `/real-estate-crm/` (relative); unknown paths 404 with `404.html`; CSP still present |
+| Static pages in the browser | 7 pages + 404: one H1 each, JSON-LD parses, canonical present, no horizontal scroll at 375 px |
+| `scripts/test_browser.py --production tests/branding.spec.ts tests/crm.spec.ts -g "public\|responsive\|branding"` | **5 passed** |
+
+Not verified: production deployment, Google rendering, and the Rich Results
+Test. The full Playwright suite was not run.

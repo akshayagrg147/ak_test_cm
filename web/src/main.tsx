@@ -269,11 +269,28 @@ function usePublicConfig() {
     queryFn: () => api<PublicConfig>("/public"),
   });
 }
+const PUBLIC_DESCRIPTION =
+  "ViaCRM is a real estate CRM for Indian brokers and agencies: capture leads from your website, Google Ads, IndiaMART and Justdial, run telecalling with call recordings, and manage site visits and bookings.";
+const INSTAGRAM_URL = "https://www.instagram.com/viacrm91/";
+// Static, crawlable pages served by nginx outside the SPA router, so they are
+// plain links rather than <Link>.
+const SEO_LINKS = [
+  ["/real-estate-crm/", "Real estate CRM"],
+  ["/property-dealer-crm/", "Property dealer CRM"],
+  ["/real-estate-lead-management/", "Lead management"],
+  ["/call-recording-crm/", "Call recording CRM"],
+  ["/blog/", "Blog"],
+];
 function PublicSite() {
   const q = usePublicConfig();
   const config = q.data;
   useEffect(() => {
-    document.title = `${config?.brand || "ViaCRM"} — Every lead. A way forward.`;
+    // Restore the homepage title/description after client-side navigation
+    // from /login, which changes them.
+    document.title = `${config?.brand || "ViaCRM"} — Real Estate CRM for Indian Brokers & Agencies`;
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", PUBLIC_DESCRIPTION);
   }, [config?.brand]);
   const [preview, setPreview] = useState("Pipeline");
   const [menu, setMenu] = useState(false);
@@ -333,6 +350,7 @@ function PublicSite() {
           <a href="#questions" onClick={() => setMenu(false)}>
             FAQs
           </a>
+          <a href="/blog/">Guides</a>
           <Link to="/login" className="login-link">
             Customer login <ArrowUpRight size={16} />
           </Link>
@@ -345,7 +363,7 @@ function PublicSite() {
         <section className="hero">
           <div className="hero-copy">
             <div className="pill">
-              <span />A REAL ESTATE WORKSPACE, BUILT FOR YOUR TEAM
+              <span />A REAL ESTATE CRM FOR INDIAN BROKERS & AGENCIES
             </div>
             <h1>
               One workspace.
@@ -353,9 +371,9 @@ function PublicSite() {
               <em>Every opportunity.</em>
             </h1>
             <p>
-              Bring buyers, properties and site visits together. A real estate
-              CRM for your agency, with your identity and a clear path from
-              enquiry to booking.
+              Bring buyers, calls, properties and site visits together. A real
+              estate CRM for property dealers, brokers and agencies, with your
+              identity and a clear path from enquiry to booking.
             </p>
             <div className="hero-actions">
               <a className="button large" href="#contact">
@@ -664,9 +682,17 @@ function PublicSite() {
               )}
             </div>
           ) : (
-            <div className="setup-notice">
-              Contact details are being configured. Existing customers can{" "}
-              <Link to="/login">sign in here</Link>.
+            <div className="hero-actions">
+              <a
+                className="button light large"
+                href={INSTAGRAM_URL}
+                rel="noopener"
+              >
+                Message us on Instagram <ArrowUpRight size={18} />
+              </a>
+              <Link className="button outline-light large" to="/login">
+                Customer login <ArrowUpRight size={18} />
+              </Link>
             </div>
           )}
         </section>
@@ -677,6 +703,16 @@ function PublicSite() {
           <BrandName name={config?.brand || "ViaCRM"} />
         </Link>
         <p>Every lead. A way forward.</p>
+        <nav className="public-footer-links" aria-label="Solutions">
+          {SEO_LINKS.map(([href, label]) => (
+            <a key={href} href={href}>
+              {label}
+            </a>
+          ))}
+          <a href={INSTAGRAM_URL} rel="noopener">
+            Instagram
+          </a>
+        </nav>
         <Link to="/login">
           Existing customer login <ArrowUpRight size={15} />
         </Link>

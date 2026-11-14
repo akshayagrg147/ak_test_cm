@@ -1350,3 +1350,20 @@ backlink plan in `docs/seo/backlinks.md` has drafts only; nothing was submitted.
 
 Not verified: production deployment, Google rendering, and the Rich Results
 Test. The full Playwright suite was not run.
+
+### SEO pass reviewed and merged onto the deploy branch — 14 November 2026
+
+Commit `6d238fa` (SEO session) was merged onto `claude/backup-upload-fix`. The only conflict was in this file: both sections were appended and both are kept.
+
+- **Review.**
+  - The nginx shell routes (`/`, `/login`, `/app`, `/app/*`, `/enquiry/*`) match every top-level route in the React router.
+  - API 404s are not intercepted, so they keep the CRM JSON error codes that Android 1.1.4 relies on.
+  - The page claims match shipped features: website and Google Ads capture, IndiaMART polling, the Justdial webhook and CSV import. There are no WhatsApp claims and no prices.
+- **Web.** `npm ci`, `npm run lint` and `npm run build` pass.
+- **Real nginx 1.28-alpine with the built `dist` and a stub API.**
+  - `nginx -t` passes.
+  - The app routes serve the shell with `X-Robots-Tag: noindex, nofollow`. `/index.html` is `noindex`. The homepage, marketing pages, blog, `robots.txt`, `sitemap.xml` and `og-image.png` are 200 with no robots header.
+  - `/blog` and `/real-estate-crm` redirect with a relative `Location`. Unknown paths such as `/dashboard` return 404 with the 404 page. `/api/*` passes 200 and 404 through from the upstream.
+  - CSP and nosniff are present on the static pages, and `/site/` sets a 7-day cache.
+- **Static link check.** No broken absolute links in `dist`.
+- **Browser.** `scripts/test_browser.py --production`: **90 passed** (disposable services; the database was removed).

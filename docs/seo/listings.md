@@ -12,9 +12,8 @@ Before you paste:
 - Make no claims about WhatsApp integration, auto GST invoices, customer
   counts or ratings.
 
-**Confirm the offer before you post.** The copy below says "free data import
-from Excel", which comes from the playbook's recommended offer. Remove it if
-you won't do that. The playbook's "14-day free trial" is fine to mention. The backend creates
+Offer confirmed by Akshay (14 Nov 2026): free Excel import and setup for
+trial dealers, plus the 14-day free trial. The backend creates
 companies with a 14-day, 5-seat trial by default. Super admin sets this when
 onboarding.
 

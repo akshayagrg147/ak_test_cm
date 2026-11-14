@@ -1379,4 +1379,5 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
 - **Local container smoke test** (DRY_RUN, test secrets):
   - `/ig-webhook/health` returns 200. The leads page returns 401 without auth and 401 with a wrong password; with the right password it returns 200 and lists a lead created by the previous `store.py`, so the column migration keeps old rows.
   - Six signed DMs (DEMO, name, team size, sources, tool, price) moved the chat to `done`, created a lead and took the pricing path.
-- **Not verified.** Production replies and the ViaCRM capture push with real settings. The `leads.csv` column order changed, so an existing file on the host would have mismatched headers for new rows.
+- **CSV header fix.** The `leads.csv` column order changed. The bot session's follow-up `notify.py` (SHA-256 `311079d3…`) renames an old-header file to `leads-old-<unix>.csv` and starts a new one. Locally tested with an old-format file: old rows were kept and the new row was written under the new header.
+- **Not verified.** Production replies and the ViaCRM capture push with real settings.

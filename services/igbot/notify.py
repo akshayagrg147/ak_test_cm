@@ -20,6 +20,11 @@ def push(kind: str, row: dict, summary: str) -> None:
     ist = timezone(timedelta(hours=5, minutes=30))
     rec["created"] = datetime.fromtimestamp(float(rec["created"] or 0) or datetime.now().timestamp(), ist).strftime("%Y-%m-%d %H:%M IST")
     CSV.parent.mkdir(exist_ok=True)
+    if CSV.exists():  # columns changed (14 Nov 2026): keep the old file, start a new one with the new header
+        with CSV.open(newline="") as f:
+            header = next(csv.reader(f), [])
+        if header != COLS:
+            CSV.rename(CSV.with_name(f"leads-old-{int(datetime.now().timestamp())}.csv"))
     new = not CSV.exists()
     with CSV.open("a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=COLS, extrasaction="ignore")

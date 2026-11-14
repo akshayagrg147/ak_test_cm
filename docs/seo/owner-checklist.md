@@ -70,7 +70,7 @@ pages usually take 4 to 12 weeks.
      site, or a Demo Realty screenshot.
    - **Hours:** your WhatsApp reply hours.
    - **Products** (optional): one item "ViaCRM real estate CRM", price
-     "Contact for pricing" until you confirm prices, linking to
+     "From ₹399/user/month", linking to
      `https://viacrm.in/real-estate-crm/`.
 9. **Weekly:** add a post with a Reel or carousel from Instagram and the link
    `https://viacrm.in/property-dealer-crm/`.

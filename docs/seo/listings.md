@@ -6,8 +6,9 @@ Justdial packages yet. Nothing has been submitted.
 Before you paste:
 
 - Replace `[sales number]`, `[city]` and `[your name]`.
-- Leave pricing as **"Contact for pricing"** until you confirm prices. The
-  suggested ₹399/user/month in the sales playbook is not confirmed yet.
+- Prices are confirmed (14 Nov 2026). Wherever a listing has a pricing field,
+  use: **"From ₹399/user/month (₹3,999/user/year), 14-day free trial"**. Keep the temporary Founding Dealer ₹249 offer **off**
+  directory listings.
 - Make no claims about WhatsApp integration, auto GST invoices, customer
   counts or ratings.
 
@@ -69,7 +70,7 @@ IndiaMART will keep asking for them.
 | Field | Paste |
 |---|---|
 | Category | Customer Relationship Management (CRM) Software / Real Estate Software |
-| Price | Leave blank, or "Ask for price" / "Contact for pricing" |
+| Price | ₹399 per user per month (₹3,999/user/year; 14-day free trial) |
 | Unit | Per user (only if a unit is required) |
 | Deployment | Cloud / Web based, Android app |
 | Usage / Application | Real estate agencies, property dealers, brokers, channel partners |
@@ -124,7 +125,7 @@ directory submission).
 | Website | https://viacrm.in/ |
 | Category | Real Estate CRM (primary), CRM Software, Lead Management Software |
 | Deployment | Cloud, SaaS, Web, Android |
-| Pricing model | Per user, "Contact for pricing" |
+| Pricing model | Per user: From ₹399/user/month (₹3,999/user/year), 14-day free trial |
 | Free trial | Yes, 14 days |
 | Target customers | Small and medium real estate businesses, India |
 | Languages | English, Hindi |
@@ -167,7 +168,7 @@ accept them yourself.
 | Brand / publisher | ViaCRM |
 | Category | Real Estate Software › Real Estate CRM; also CRM Software |
 | Deployment | Cloud (SaaS), Android app |
-| Pricing | Contact for pricing (per user) |
+| Pricing | From ₹399/user/month (₹3,999/user/year), 14-day free trial |
 | Free trial | 14 days |
 | Free demo | Yes (WhatsApp / video) |
 | Data hosting | India (AWS Mumbai) |

@@ -17,7 +17,7 @@ export const SITE = {
   // Sales WhatsApp number with country code, digits only (e.g. "91XXXXXXXXXX").
   // When set, every landing page shows a "free demo / 14-day trial" WhatsApp
   // button. This is a contact link only: ViaCRM has no WhatsApp feature.
-  whatsapp: "",
+  whatsapp: "917508075534",
 };
 
 const whatsappText =

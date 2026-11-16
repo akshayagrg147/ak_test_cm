@@ -1,6 +1,6 @@
 # Working on this project
 
-Keep this independent CRM isolated from the reference repositories and production resources. WhatsApp remains excluded. The user explicitly added an Android call-sync APK on 18 October 2026; it must use the phone's built-in recordings with explicit folder access and report device limitations honestly. Do not add pricing/subscriptions or deploy/push without an explicit instruction.
+Keep this independent CRM isolated from the reference repositories and production resources. WhatsApp is limited to click-to-chat links (see below). The user explicitly added an Android call-sync APK on 18 October 2026; it must use the phone's built-in recordings with explicit folder access and report device limitations honestly. Do not add pricing/subscriptions or deploy/push without an explicit instruction.
 
 On 25 October 2026 the owner selected ViaCRM as the web product brand and
 authorized a new logo. Use the connected V masters in `web/public/brand/`, retain
@@ -37,7 +37,7 @@ The 1.1.2 lead View history screen reads the existing permission-filtered CRM
 history and files APIs. Keep CRM history separate from the local call outbox.
 Recordings use authenticated, bounded private downloads and in-app playback;
 stop playback and remove its temporary file on background/session changes.
-Telecallers must not get any recording-delete action. WhatsApp remains excluded.
+Telecallers must not get any recording-delete action. WhatsApp is limited to click-to-chat links (see below).
 
 Version 1.1.3 cleans up prior-process playback previews on MainActivity startup.
 Keep process-specific preview filenames, preserve active previews created by the
@@ -59,7 +59,15 @@ On 12 November 2026 the owner chose to host the Instagram DM/comment lead bot
 the CRM's server and releases. It is an optional Compose profile enabled only by
 the host's private `shared/igbot.env`; keep its secrets out of Git, CI and SSM
 command history, its 128 MB limit, its `/ig-webhook*` route and 1 MB body cap.
-It is not WhatsApp; WhatsApp remains excluded.
+It is not WhatsApp, and it is not a WhatsApp integration.
+
+On 17 November 2026 the owner approved WhatsApp **click-to-chat only**: a lead
+page button that opens `https://wa.me/<number>?text=…` on the user's own device
+with an editable greeting. ViaCRM never sends, receives, reads or schedules
+WhatsApp messages, has no WhatsApp API or account integration and does no bulk
+messaging. Hide the button for do-not-contact leads and record "WhatsApp chat
+opened", never "sent". Marketing copy may say "one click opens WhatsApp chat" but
+not that ViaCRM syncs or sends WhatsApp messages.
 
 - Backend: FastAPI, SQLAlchemy and PostgreSQL only. Run from `backend/` with the root `.venv`.
 - The user added a dedicated field-executive visit/handoff/follow-up flow and

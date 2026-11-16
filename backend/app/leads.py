@@ -401,6 +401,17 @@ def add_note(lead_id: str, data: NoteIn, ctx=Depends(current), db: Session = Dep
     return dump(note)
 
 
+@router.post("/{lead_id}/whatsapp-opened", status_code=201)
+def whatsapp_opened(lead_id: str, ctx=Depends(current), db: Session = Depends(get_db, scope="function")):
+    """Record that a user opened a WhatsApp click-to-chat link. ViaCRM never sends or reads the message."""
+    mutate(db, ctx)
+    lead = lead_access(db, ctx, lead_id)
+    if lead.dnd:
+        fail("do_not_contact", "This client is marked do-not-contact", 409)
+    audit(db, ctx, "lead", lead_id, "whatsapp_opened", "Opened a WhatsApp chat (click-to-chat)")
+    return {"ok": True}
+
+
 @router.put("/{lead_id}/notes/{note_id}")
 def edit_note(
     lead_id: str, note_id: str, data: NoteIn, ctx=Depends(current), db: Session = Depends(get_db, scope="function")

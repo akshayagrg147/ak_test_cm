@@ -6069,3 +6069,15 @@ th {
   line-height: 1.5;
   margin: 18px auto 0;
 }
+
+/* WhatsApp click-to-chat (opens the user's own WhatsApp; nothing is sent by ViaCRM) */
+.button.whatsapp-button {
+  color: #0b5d33;
+  background: #eaf7ef;
+  border-color: #b9e2c8;
+}
+.button.whatsapp-button:hover,
+.button.whatsapp-button:focus-visible {
+  background: #d9f0e2;
+  color: #084a28;
+}

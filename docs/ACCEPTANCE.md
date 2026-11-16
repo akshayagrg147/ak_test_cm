@@ -1401,3 +1401,14 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
   - Six section videos for the Hindi demo were recorded with Playwright from a throwaway local stack (database `viacrm_demo_rec_test`, dropped afterwards), never production.
   - The fictional call used the normal device sync and recording-upload APIs.
   - Every clip was checked frame by frame: the auto-assign alert, the overdue-callback filter, the recording player, the requirement matches, the visit-clash error, the early-attended visit outcome, the booking and the dashboard periods.
+
+### WhatsApp click-to-chat (branch `claude/whatsapp-click-to-chat`) — 17 November 2026
+
+- **Owner approval.** Akshay approved it in this session ("Yes, build it"). AGENTS.md and the README now read "WhatsApp click-to-chat only (no integration)". Earlier dated entries in this file keep their original wording as history.
+- **Lead page.** A **WhatsApp** link next to Open dialer opens `https://wa.me/<91XXXXXXXXXX>?text=` with an editable greeting, in a new tab with `noopener`. It is hidden for do-not-contact leads.
+- **`POST /api/leads/{id}/whatsapp-opened`.** Records "Opened a WhatsApp chat (click-to-chat)" in lead history. It returns 409 for DND, 404 outside the caller's scope or company, and requires a writable session. No message content is sent to or stored by ViaCRM.
+- **Checks:**
+  - ruff passes; pytest **305 passed** (2 new: logging wording, DND, scope and tenant); lint and build pass.
+  - The browser journey `whatsapp.spec.ts` passes: wa.me is intercepted, never contacted; it checks the link, number, greeting, new-tab attributes, the axe check, the "opened" activity with no "sent" wording, and that the button is hidden for DND.
+  - Full browser suite: **90 passed, 1 failed**. The failure was `hourly-call-chart.spec.ts`, run at about 00:05 IST; it passed 3/3 when rerun alone. It is a pre-existing time-of-day edge at IST midnight, unrelated to this change.
+- **Not deployed.**

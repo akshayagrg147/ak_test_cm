@@ -14,7 +14,7 @@ unchanged by this extension. Super admin creates company admin logins, manages
 branding/logos and confirms UPI or collected cash before subscription activation.
 Configure your payment methods and publish your own plans in Super admin.
 
-An independent CRM built from the supplied acceptance brief. **WhatsApp is excluded.** The user added an Android call-sync companion on 18 October 2026, using the phone's built-in recordings and explicit folder access. See the [Android setup and limitations](android/README.md). The original local implementation kept reference repositories and production resources isolated; hosting now uses a separate, explicitly authorized AWS environment.
+An independent CRM built from the supplied acceptance brief. **WhatsApp: click-to-chat only (no integration).** A lead's WhatsApp button opens a chat on the user's own phone; ViaCRM never sends or reads WhatsApp messages. The user added an Android call-sync companion on 18 October 2026, using the phone's built-in recordings and explicit folder access. See the [Android setup and limitations](android/README.md). The original local implementation kept reference repositories and production resources isolated; hosting now uses a separate, explicitly authorized AWS environment.
 
 ## Automatic production updates
 

@@ -277,6 +277,17 @@ Existing precise timestamps and older date-only saved filters remain usable.
 marked the lead lost. Clearing filters or applying a saved view keeps this page
 within lost deals. Telecallers continue to see only their assigned leads.
 
+### WhatsApp click-to-chat
+
+On a lead's page, **WhatsApp** (next to **Open dialer**) opens WhatsApp on your own
+phone or computer with a short greeting you can edit before sending, for example
+"Namaste Ravi ji, Demo Realty se Priya. …". Indian 10-digit numbers get the 91
+country code. ViaCRM does not send, receive, read or schedule WhatsApp messages and
+has no WhatsApp account integration or bulk messaging. The lead's activity records
+"Opened a WhatsApp chat (click-to-chat)", which shows the chat was opened, not that a
+message was sent. The button is hidden for do-not-contact clients, and the server
+refuses the log for them. Anyone who can open the lead can use it.
+
 ### Automatic callback alerts
 
 The **bell in the top bar** shows a red count when a callback is overdue. Click

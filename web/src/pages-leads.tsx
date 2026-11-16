@@ -17,6 +17,7 @@ import {
   File,
   GitMerge,
   History as HistoryIcon,
+  MessageCircle,
   Phone,
   Plus,
   ShieldAlert,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 import { api, download, params, send } from "./api";
 import { useAction, useAuth, useData, useDirectory } from "./main";
+import { whatsappGreeting, whatsappLink } from "./whatsapp";
 import { BuyerBrief } from "./pages-estate";
 import { LeadFieldWork } from "./pages-field";
 import {
@@ -1212,6 +1214,41 @@ export function LeadDetail() {
                       <Phone size={16} />
                       Open dialer
                     </a>
+                    {!lead.dnd &&
+                      (() => {
+                        const company =
+                          session?.organization?.settings.brand_name ||
+                          session?.organization?.name ||
+                          "ViaCRM";
+                        const href = whatsappLink(
+                          lead.phone,
+                          whatsappGreeting(
+                            lead.name,
+                            company,
+                            session?.user.name || "",
+                          ),
+                        );
+                        return (
+                          href && (
+                            <a
+                              className="button secondary whatsapp-button"
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Open WhatsApp chat with ${lead.name}`}
+                              title="Opens WhatsApp on your device with a greeting you can edit. ViaCRM does not send the message."
+                              onClick={() => {
+                                void action(() =>
+                                  send(`/leads/${lead.id}/whatsapp-opened`, {}),
+                                ).catch(() => undefined);
+                              }}
+                            >
+                              <MessageCircle size={16} />
+                              WhatsApp
+                            </a>
+                          )
+                        );
+                      })()}
                   </div>
                   <dl className="detail-list">
                     <div>

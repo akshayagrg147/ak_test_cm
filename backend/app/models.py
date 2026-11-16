@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, func, Date, DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base, Entity, now
@@ -155,6 +155,30 @@ class Task(Scoped, Base):
     state: Mapped[str] = mapped_column(String(20), default="open")
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MessageTemplate(Scoped, Base):
+    """Company message for WhatsApp click-to-chat or SMS links. ViaCRM never sends it."""
+
+    __tablename__ = "message_templates"
+    name: Mapped[str] = mapped_column(String(60))
+    body: Mapped[str] = mapped_column(Text)
+    purpose: Mapped[str] = mapped_column(String(20), default="any")
+    active: Mapped[bool] = mapped_column(default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Hidden after a delete when activity notes still reference it; frees the name.
+    deleted: Mapped[bool] = mapped_column(default=False)
+    __table_args__ = (
+        Index(
+            "uq_message_template_name",
+            "org_id",
+            func.lower(name),
+            unique=True,
+            postgresql_where=deleted.is_(False),
+        ),
+    )
 
 
 class Definition(Scoped, Base):

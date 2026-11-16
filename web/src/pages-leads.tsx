@@ -18,6 +18,7 @@ import {
   GitMerge,
   History as HistoryIcon,
   MessageCircle,
+  MessageSquareText,
   Phone,
   Plus,
   ShieldAlert,
@@ -30,6 +31,7 @@ import {
 import { api, download, params, send } from "./api";
 import { useAction, useAuth, useData, useDirectory } from "./main";
 import { whatsappGreeting, whatsappLink } from "./whatsapp";
+import { TemplateMessageDialog } from "./message-templates";
 import { BuyerBrief } from "./pages-estate";
 import { LeadFieldWork } from "./pages-field";
 import {
@@ -1145,6 +1147,7 @@ export function LeadDetail() {
   const defs = useData<Definition[]>("/definitions");
   const dir = useDirectory();
   const [tab, setTab] = useState("Activity");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [dialog, setDialog] = useState("");
   const [note, setNote] = useState("");
   const [editingNote, setEditingNote] = useState<{
@@ -1249,6 +1252,37 @@ export function LeadDetail() {
                           )
                         );
                       })()}
+                    {(() => {
+                      const closed =
+                        ["lost", "converted"].includes(lead.status) ||
+                        !!defs.data?.find(
+                          (d) => d.kind === "stage" && d.key === lead.stage,
+                        )?.config?.closed;
+                      const blocked = lead.dnd
+                        ? "Client is marked do-not-contact"
+                        : closed
+                          ? "This client is closed; reopen the lead before messaging"
+                          : "";
+                      return (
+                        <>
+                          <Button
+                            variant="secondary"
+                            disabled={!!blocked}
+                            title={
+                              blocked ||
+                              "Pick a ready message for WhatsApp or SMS"
+                            }
+                            onClick={() => setTemplatesOpen(true)}
+                          >
+                            <MessageSquareText size={16} />
+                            Templates
+                          </Button>
+                          {blocked && lead.dnd === false && (
+                            <small className="muted-note">{blocked}</small>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <dl className="detail-list">
                     <div>
@@ -1767,6 +1801,12 @@ export function LeadDetail() {
                     ),
                   )
                 }
+              />
+            )}
+            {templatesOpen && (
+              <TemplateMessageDialog
+                lead={lead}
+                close={() => setTemplatesOpen(false)}
               />
             )}
             {dialog === "edit" && (

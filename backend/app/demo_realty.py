@@ -18,6 +18,7 @@ from sqlalchemy import delete, select
 
 from .common import init_org
 from .db import Base, SessionLocal, now
+from .message_templates import ensure_starter_templates
 from .models import (
     Assignment,
     Audit,
@@ -108,6 +109,7 @@ def create():
                                    amount=0, seats=10, starts_on=today, ends_on=today + timedelta(days=5 * 365)))
         db.flush()
         _records(db, org)
+        ensure_starter_templates(db, org.id)
     print(f"{DEMO_NAME} created. Logins: " + ", ".join(f"{n} {p}" for n, _, p in TEAM))
     print("Set passwords in Super admin (admin) and the company's Team page (callers) before sharing.")
 
@@ -122,6 +124,7 @@ def reset():
                 db.execute(delete(table).where(table.c.org_id == DEMO_ID))
         db.flush()
         _records(db, org)
+        ensure_starter_templates(db, org.id)
     print(f"{DEMO_NAME} records were reset. Logins and passwords are unchanged.")
 
 

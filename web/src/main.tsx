@@ -55,6 +55,7 @@ import {
   Users,
   X,
   Zap,
+  MessageSquareText,
 } from "lucide-react";
 import {
   ApiError,
@@ -94,6 +95,7 @@ import { FieldWorkPage } from "./pages-field";
 import { DashboardPage } from "./pages-dashboard";
 import { CallbackAlerts } from "./callback-alerts";
 import { EnquiryPage } from "./lead-capture";
+import { MessageTemplatesPage } from "./message-templates";
 import { HourlyCallChart } from "./hourly-call-chart";
 import {
   AttendancePage,
@@ -974,6 +976,12 @@ const navAreas = [
         path: "integrations",
         label: "Connections",
         icon: GitBranch,
+        roles: ["admin", "manager"],
+      },
+      {
+        path: "message-templates",
+        label: "Message templates",
+        icon: MessageSquareText,
         roles: ["admin", "manager"],
       },
       {
@@ -2046,6 +2054,14 @@ function App() {
                 element={
                   <Guard roles={["admin", "manager"]}>
                     <IntegrationsPage />
+                  </Guard>
+                }
+              />
+              <Route
+                path="message-templates"
+                element={
+                  <Guard roles={["admin", "manager"]}>
+                    <MessageTemplatesPage />
                   </Guard>
                 }
               />

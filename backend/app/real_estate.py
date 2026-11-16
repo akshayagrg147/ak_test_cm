@@ -48,6 +48,9 @@ def setup(ctx=Depends(current), db: Session = Depends(get_db, scope="function"))
         item = db.scalar(rows(db, Definition, ctx.org_id).where(Definition.kind == "category", Definition.key == key))
         if not item:
             db.add(Definition(org_id=ctx.org_id, kind="category", key=key, label=key.title(), position=pos))
+    from .message_templates import ensure_starter_templates
+
+    ensure_starter_templates(db, ctx.org_id, ctx.id)
     audit(
         db,
         ctx,

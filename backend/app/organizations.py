@@ -134,6 +134,9 @@ def create_org(data: OrganizationIn, ctx=Depends(current), db: Session = Depends
         from .models import CompanySubscription
 
         db.add(CompanySubscription(org_id=org.id, starts_on=today(), ends_on=today() + timedelta(days=data.trial_days - 1), seats=5))
+        from .message_templates import ensure_starter_templates
+
+        ensure_starter_templates(db, org.id)
     db.flush()
     return {"organization": dump(org), "admin": dump(user)}
 

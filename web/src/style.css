@@ -6069,3 +6069,67 @@ th {
   line-height: 1.5;
   margin: 18px auto 0;
 }
+
+/* Buyers for this property (reverse match) */
+.buyer-match-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.buyer-match-badge:hover,
+.buyer-match-badge:focus-visible {
+  background: #dfe7ff;
+}
+.matching-buyers {
+  margin-top: 22px;
+  scroll-margin-top: 90px;
+}
+.buyer-match-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.buyer-match-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.3fr) minmax(0, 0.9fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.buyer-match-list li > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.buyer-match-list li span,
+.buyer-match-list li small {
+  color: var(--muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.buyer-match-notice a {
+  font-weight: 600;
+}
+.muted-note {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 12px 0 0;
+}
+@media (max-width: 760px) {
+  .buyer-match-list li {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

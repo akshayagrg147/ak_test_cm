@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -12,11 +12,18 @@ import {
   Ruler,
   Search,
   Upload,
+  Users,
 } from "lucide-react";
 import { api, download, params, send } from "./api";
 import { PrivateLogo, useAction, useAuth, useData, useDirectory } from "./main";
 import { LeadPicker } from "./pages-leads";
-import type { Property, Requirement, Visit, Booking } from "./estate-types";
+import type {
+  Property,
+  Requirement,
+  Visit,
+  Booking,
+  BuyerMatches,
+} from "./estate-types";
 import {
   Badge,
   Button,
@@ -156,6 +163,17 @@ function PropertyCard({ property: p }: { property: Property }) {
         <div className="estate-line">
           <Badge value={p.status} />
           <small>{p.listing_type === "rent" ? "FOR RENT" : "FOR SALE"}</small>
+          {!!p.buyer_match_count && (
+            <Link
+              className="buyer-match-badge"
+              to={"/app/properties/" + p.id + "#matching-buyers"}
+              aria-label={`${p.buyer_match_count} saved ${p.buyer_match_count === 1 ? "buyer matches" : "buyers match"} ${p.title}`}
+            >
+              <Users size={13} />
+              {p.buyer_match_count}{" "}
+              {p.buyer_match_count === 1 ? "buyer" : "buyers"}
+            </Link>
+          )}
         </div>
         <h3>
           <Link to={"/app/properties/" + p.id}>{p.title}</Link>
@@ -296,9 +314,11 @@ const amenityHints: Record<string, string> = {
 function PropertyForm({
   item,
   close,
+  onCreated,
 }: {
   item: Property | true;
   close: () => void;
+  onCreated?: (created: Property) => void;
 }) {
   const action = useAction();
   const [values, setValues] = useState<Values>(() => {
@@ -377,8 +397,8 @@ function PropertyForm({
           setBusy(true);
           setError(null);
           try {
-            await action(() =>
-              send(
+            const saved = await action(() =>
+              send<Property>(
                 item === true ? "/properties" : "/properties/" + item.id,
                 {
                   ...values,
@@ -395,6 +415,16 @@ function PropertyForm({
                 item === true ? "POST" : "PUT",
               ),
             );
+            if (item === true && onCreated) {
+              // The create response keeps its edit-compatible shape; ask for the match count separately.
+              const matches = await api<BuyerMatches>(
+                `/properties/${saved.id}/buyer-matches`,
+              ).catch(() => null);
+              onCreated({
+                ...saved,
+                buyer_match_count: matches?.total ?? null,
+              });
+            }
             close();
           } catch (e) {
             setError(e);
@@ -439,7 +469,8 @@ export function PropertiesPage() {
   const { session } = useAuth();
   const [f, setF] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [created, setCreated] = useState<Property | null>(null);
   const q = useData<{ items: Property[]; total: number }>(
     "/properties?" + params({ ...f, page }),
   );
@@ -518,6 +549,18 @@ export function PropertiesPage() {
           onChange={(e) => filter("max_price", e.target.value)}
         />
       </div>
+      {created && (
+        <p className="success-notice buyer-match-notice" role="status">
+          {created.buyer_match_count
+            ? `${created.buyer_match_count} saved ${created.buyer_match_count === 1 ? "buyer matches" : "buyers match"} ${created.title}. `
+            : created.buyer_match_count === 0
+              ? `${created.title} was added. No saved buyers match it yet. `
+              : `${created.title} was added. `}
+          <Link to={"/app/properties/" + created.id + "#matching-buyers"}>
+            View
+          </Link>
+        </p>
+      )}
       <Load query={q}>
         {(data) =>
           data.items.length ? (
@@ -542,7 +585,13 @@ export function PropertiesPage() {
           )
         }
       </Load>
-      {adding && <PropertyForm item={true} close={() => setAdding(false)} />}
+      {adding && (
+        <PropertyForm
+          item={true}
+          close={() => setAdding(false)}
+          onCreated={setCreated}
+        />
+      )}
     </>
   );
 }
@@ -722,6 +771,7 @@ export function PropertyDetailPage() {
                 )}
               </Panel>
             </div>
+            <MatchingBuyers propertyId={p.id} />
             {edit && <PropertyForm item={p} close={() => setEdit(false)} />}
             {archive && (
               <FormDialog
@@ -743,6 +793,95 @@ export function PropertyDetailPage() {
         )}
       </Load>
     </>
+  );
+}
+
+/** Saved buyers whose requirements fit this property; the server applies role scope and hides do-not-contact names. */
+function MatchingBuyers({ propertyId }: { propertyId: string }) {
+  const [page, setPage] = useState(1);
+  const q = useData<BuyerMatches>(
+    `/properties/${propertyId}/buyer-matches?page=${page}`,
+  );
+  const loaded = !!q.data;
+  useEffect(() => {
+    if (loaded && window.location.hash === "#matching-buyers")
+      document
+        .getElementById("matching-buyers")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [loaded]);
+  const budget = (min: string, max: string | null) =>
+    max ? `${money(min)} – ${money(max)}` : `From ${money(min)}`;
+  return (
+    <div id="matching-buyers" className="matching-buyers">
+      <Panel
+        title={`Matching buyers (${q.data?.total ?? "…"})`}
+        description="Open clients whose saved property brief fits this listing: budget, purpose, city, locality, type and bedrooms."
+      >
+        <Load query={q}>
+          {(d) =>
+            !d.available ? (
+              <Empty
+                title="Property is not available; no matching shown"
+                description="Matching runs only for available, unarchived inventory."
+              />
+            ) : (
+              <>
+                {d.items.length ? (
+                  <ul className="buyer-match-list">
+                    {d.items.map((b) => (
+                      <li key={b.id}>
+                        <div>
+                          <strong>{b.name}</strong>
+                          <span>
+                            {b.owner_name || "Unassigned"} · {b.stage_label}
+                          </span>
+                        </div>
+                        <div>
+                          <span>{budget(b.budget_min, b.budget_max)}</span>
+                          <span>
+                            {b.localities.length
+                              ? b.localities.join(", ")
+                              : "Any locality"}
+                          </span>
+                        </div>
+                        <small>
+                          Last contact:{" "}
+                          {b.last_contact ? dateTime(b.last_contact) : "—"}
+                        </small>
+                        <Link
+                          className="button secondary"
+                          to={"/app/leads/" + b.id}
+                        >
+                          Open client
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty
+                    title="No saved buyers match yet"
+                    description="Buyers appear here when their property brief fits this listing."
+                  />
+                )}
+                {d.dnd_hidden > 0 && (
+                  <p className="muted-note">
+                    {d.dnd_hidden} more{" "}
+                    {d.dnd_hidden === 1 ? "matches but is" : "match but are"}{" "}
+                    do-not-contact.
+                  </p>
+                )}
+                <Pager
+                  total={d.total}
+                  page={page}
+                  size={25}
+                  setPage={setPage}
+                />
+              </>
+            )
+          }
+        </Load>
+      </Panel>
+    </div>
   );
 }
 

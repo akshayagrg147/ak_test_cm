@@ -21,6 +21,28 @@ export interface Property {
   amenities: string[];
   status: string;
   files: FileItem[];
+  /** Contactable saved buyers matching this listing, within the viewer's scope; null when not available. */
+  buyer_match_count?: number | null;
+}
+export interface BuyerMatch {
+  id: string;
+  name: string;
+  owner_id: string | null;
+  owner_name: string | null;
+  stage: string;
+  stage_label: string;
+  budget_min: string;
+  budget_max: string | null;
+  localities: string[];
+  last_contact: string | null;
+  created_at: string;
+}
+export interface BuyerMatches {
+  items: BuyerMatch[];
+  total: number;
+  dnd_hidden: number;
+  available: boolean;
+  page: number;
 }
 export interface Requirement {
   purpose: string;

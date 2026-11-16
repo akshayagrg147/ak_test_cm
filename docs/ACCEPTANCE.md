@@ -1401,3 +1401,20 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
   - Six section videos for the Hindi demo were recorded with Playwright from a throwaway local stack (database `viacrm_demo_rec_test`, dropped afterwards), never production.
   - The fictional call used the normal device sync and recording-upload APIs.
   - Every clip was checked frame by frame: the auto-assign alert, the overdue-callback filter, the recording player, the requirement matches, the visit-clash error, the early-attended visit outcome, the booking and the dashboard periods.
+
+### Buyers for this property (spec 2, branch `claude/buyers-for-property`) — 16 November 2026
+
+- **Shared matcher.** `backend/app/matching.py` holds one SQL match condition, now used by both `/leads/{id}/property-matches` and the new `/properties/{id}/buyer-matches`. It also has a Python mirror, `requirement_matches`.
+  - Cities and localities are now trimmed and compared in lower case on both sides. Before this, the forward match did not trim.
+  - Property list items gain `buyer_match_count`, computed in one grouped query per page (null for unavailable items).
+  - Create and edit responses are unchanged, because a round-trip edit test caught that an extra field breaks the strict edit schema.
+- **`tests/test_buyer_matches.py` (3 tests):**
+  - Spec fixtures L1–L5: only L1 is listed and `dnd_hidden` is 1; the closed, rent-purpose and low-budget leads are excluded.
+  - Caller scope: T1 sees only L1 and T2 only L6, and DND is counted within each caller's own scope. Badge counts equal the endpoint totals for admin, manager and both callers.
+  - Another company gets 404. Reserved inventory returns `available: false` with an empty list.
+  - A 10×10 grid gives identical pairs from forward, reverse and the Python mirror.
+- **Checks:**
+  - ruff passes; full backend suite **306 passed**; lint and build pass.
+  - The browser journey `buyer-matches.spec.ts` (add property → "1 saved buyer matches" → View → Matching buyers (1) with a DND count only → Open client; axe clean) passes.
+  - Full browser suite **91 passed** before the create-count change; after it, the real-estate, property-form and buyer-match journeys passed 8/8.
+- **Not deployed.** WhatsApp and Templates buttons are left out of the list until those are approved.

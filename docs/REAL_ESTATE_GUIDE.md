@@ -176,6 +176,18 @@ as well as telecallers, including their own audio uploads.
    preferred city/localities, types, bedrooms, timeline and financing. Matches
    apply all saved criteria to available inventory; customer interests are not
    inferred. Existing notes, tasks, calls, files and interests remain available.
+   **Buyers for a property** works the same rule in reverse. An available
+   property's page shows **Matching buyers (N)**: open clients whose saved brief
+   fits it on purpose (rent ↔ rent, otherwise sale), budget, city, locality
+   (trimmed, any letter case), type and bedrooms. Each match shows the owner,
+   stage, budget, localities and last contact, with **Open client**. Closed
+   (won/lost) and deleted leads are left out. Do-not-contact buyers appear only
+   as a count ("2 more match but are do-not-contact"). Telecallers and field
+   executives see and count only the buyers they can already open; admins and
+   managers see all. Property cards show the same count as a badge. After adding
+   a property, a message says how many saved buyers match. Reserved, sold or
+   archived inventory shows "Property is not available; no matching shown".
+   Nothing is sent to buyers automatically.
 3. **Property → Site visits:** schedule or reschedule an agent/property and record
    completion, no-show or cancellation with feedback. Overlapping visits for the
    same agent are blocked; adjacent visits are allowed. Future visits cannot be

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from .business_schemas import BookingIn, BookingUpdate, PropertyIn, RequirementIn, VisitIn, VisitUpdate
 from .common import REAL_ESTATE_CATEGORIES, audit, dump, get_scoped, lead_access, member, mutate, retire_healthcare_defaults, rows, lead_condition
 from .db import get_db, now
+from .matching import buyer_match_counts, match_condition, open_buyer_condition
 from .models import Attachment, Booking, BuyerRequirement, Definition, FieldHandoff, Lead, Property, SiteVisit, User
 from .security import current, fail, roles, workspace
 
@@ -118,12 +119,12 @@ def properties(
     if max_price is not None:
         query = query.where(Property.price <= max_price)
     total = db.scalar(select(func.count()).select_from(query.subquery()))
+    items = list(db.scalars(query.order_by(Property.created_at.desc(), Property.id).offset((page - 1) * 24).limit(24)))
+    counts = buyer_match_counts(db, ctx, [p.id for p in items if p.status == "available"])
     return {
         "items": [
-            property_dump(db, p)
-            for p in db.scalars(
-                query.order_by(Property.created_at.desc(), Property.id).offset((page - 1) * 24).limit(24)
-            )
+            {**property_dump(db, p), "buyer_match_count": counts.get(p.id, 0) if p.status == "available" else None}
+            for p in items
         ],
         "total": total,
         "page": page,
@@ -216,25 +217,63 @@ def property_matches(lead_id: str, ctx=Depends(current), db: Session = Depends(g
     requirement = db.scalar(rows(db, BuyerRequirement, ctx.org_id).where(BuyerRequirement.lead_id == lead_id))
     if not requirement:
         return {"items": [], "criteria_saved": False}
-    query = rows(db, Property, ctx.org_id).where(
-        Property.archived.is_(False),
-        Property.status == "available",
-        Property.price >= requirement.budget_min,
-        Property.listing_type == ("rent" if requirement.purpose == "rent" else "sale"),
+    query = (
+        select(Property)
+        .select_from(Property)
+        .join(BuyerRequirement, match_condition())
+        .where(BuyerRequirement.id == requirement.id, Property.org_id == ctx.org_id)
+        .order_by(Property.price, Property.id)
+        .limit(100)
     )
-    if requirement.budget_max is not None:
-        query = query.where(Property.price <= requirement.budget_max)
-    if requirement.city:
-        query = query.where(func.lower(Property.city) == requirement.city.lower())
-    if requirement.localities:
-        query = query.where(func.lower(Property.locality).in_([v.lower() for v in requirement.localities]))
-    if requirement.property_types:
-        query = query.where(Property.property_type.in_(requirement.property_types))
-    if requirement.bedrooms is not None:
-        query = query.where(Property.bedrooms == requirement.bedrooms)
+    return {"items": [property_dump(db, p) for p in db.scalars(query)], "criteria_saved": True}
+
+
+@router.get("/properties/{property_id}/buyer-matches")
+def buyer_matches(
+    property_id: str,
+    page: int = Query(1, ge=1),
+    ctx=Depends(current),
+    db: Session = Depends(get_db, scope="function"),
+):
+    """Open, contactable buyers the user may see whose saved requirements fit this property."""
+    workspace(ctx)
+    prop = get_scoped(db, Property, property_id, ctx)
+    if prop.archived or prop.status != "available":
+        return {"items": [], "total": 0, "dnd_hidden": 0, "available": False, "page": page}
+    base = (
+        select(Lead, BuyerRequirement)
+        .select_from(Lead)
+        .join(BuyerRequirement, BuyerRequirement.lead_id == Lead.id)
+        .join(Property, match_condition())
+        .where(Property.id == prop.id, open_buyer_condition(db, ctx))
+    )
+    contactable = base.where(Lead.dnd.is_(False))
+    total = db.scalar(select(func.count()).select_from(contactable.subquery()))
+    dnd_hidden = db.scalar(select(func.count()).select_from(base.where(Lead.dnd.is_(True)).subquery()))
+    rows_ = db.execute(contactable.order_by(Lead.created_at.desc(), Lead.name, Lead.id).offset((page - 1) * 25).limit(25)).all()
+    stages = {d.key: d.label for d in db.scalars(rows(db, Definition, ctx.org_id).where(Definition.kind == "stage"))}
+    owners = {u.id: u.name for u in db.scalars(select(User).where(User.id.in_({lead.owner_id for lead, _ in rows_ if lead.owner_id})))}
     return {
-        "items": [property_dump(db, p) for p in db.scalars(query.order_by(Property.price, Property.id).limit(100))],
-        "criteria_saved": True,
+        "items": [
+            {
+                "id": lead.id,
+                "name": lead.name,
+                "owner_id": lead.owner_id,
+                "owner_name": owners.get(lead.owner_id),
+                "stage": lead.stage,
+                "stage_label": stages.get(lead.stage, lead.stage),
+                "budget_min": requirement.budget_min,
+                "budget_max": requirement.budget_max,
+                "localities": requirement.localities or [],
+                "last_contact": lead.last_contact,
+                "created_at": lead.created_at,
+            }
+            for lead, requirement in rows_
+        ],
+        "total": total,
+        "dnd_hidden": dnd_hidden,
+        "available": True,
+        "page": page,
     }
 
 

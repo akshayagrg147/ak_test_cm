@@ -5,10 +5,21 @@
 
 /** wa.me wants digits only with the country code; Indian 10-digit numbers get 91. */
 export function whatsappNumber(phone: string): string | null {
-  const digits = (phone || "").replace(/\D/g, "").replace(/^0+/, "");
+  let digits = (phone || "").replace(/\D/g, "").replace(/^0+/, "");
+  // "+91 0 98765 43210": drop the trunk 0 written after the country code.
+  if (digits.length === 13 && digits.startsWith("910"))
+    digits = "91" + digits.slice(3);
   if (digits.length === 10) return "91" + digits;
   if (digits.length >= 11 && digits.length <= 15) return digits;
   return null;
+}
+
+const TITLES = /^(mr|mrs|ms|miss|dr|shri|sri|smt|kumari)\.?$/i;
+
+/** The name to address someone by: the first word that isn't a title such as "Mr." or "Smt.". */
+export function addressName(fullName: string): string {
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  return words.find((w) => !TITLES.test(w)) || words[0] || "";
 }
 
 export function whatsappGreeting(
@@ -16,8 +27,9 @@ export function whatsappGreeting(
   company: string,
   userName: string,
 ) {
-  const first = leadName.trim().split(/\s+/)[0] || leadName.trim();
-  return `Namaste ${first} ji, ${company} se ${userName}. Aapki property enquiry ke baare mein message kar rahe hain.`;
+  const first = addressName(leadName);
+  const sender = [company, "se", userName.trim()].filter(Boolean).join(" ");
+  return `Namaste ${first} ji, ${sender}. Aapki property enquiry ke baare mein message kar rahe hain.`;
 }
 
 export function whatsappLink(phone: string, text: string): string | null {

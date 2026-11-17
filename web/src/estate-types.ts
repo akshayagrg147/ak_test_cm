@@ -21,6 +21,8 @@ export interface Property {
   amenities: string[];
   status: string;
   files: FileItem[];
+  /** Public share link when sharing is on (property matches only). */
+  share_url?: string | null;
 }
 export interface Requirement {
   purpose: string;

@@ -235,8 +235,13 @@ def property_matches(lead_id: str, ctx=Depends(current), db: Session = Depends(g
         query = query.where(Property.property_type.in_(requirement.property_types))
     if requirement.bedrooms is not None:
         query = query.where(Property.bedrooms == requirement.bedrooms)
+    from .property_share import share_link_for
+
     return {
-        "items": [property_dump(db, p) for p in db.scalars(query.order_by(Property.price, Property.id).limit(100))],
+        "items": [
+            {**property_dump(db, p), "share_url": share_link_for(db, ctx.org_id, p.id) or None}
+            for p in db.scalars(query.order_by(Property.price, Property.id).limit(100))
+        ],
         "criteria_saved": True,
     }
 

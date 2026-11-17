@@ -1414,7 +1414,9 @@ export function LeadDetail() {
                       </button>
                     ))}
                   </div>
-                  {tab === "Property brief" && id && <BuyerBrief leadId={id} />}
+                  {tab === "Property brief" && id && (
+                    <BuyerBrief leadId={id} lead={lead} />
+                  )}
                   {lead.notes && tab === "Activity" && (
                     <div className="initial-note">
                       <span className="eyebrow">LEAD NOTES</span>

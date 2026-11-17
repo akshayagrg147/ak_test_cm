@@ -1446,3 +1446,30 @@ Built on `claude/whatsapp-click-to-chat`, including its follow-up fix: a 0 after
   - Placeholder errors are plain messages, without the "body.body" prefix.
   - Template edits are partial, so an omitted `purpose` keeps its value.
   - A new test covers all five. ruff passes; pytest **311 passed**; lint and build pass; browser **92 passed**.
+
+### Public property share links (spec 3, branch `claude/property-share-link`) — 17 November 2026
+
+Built on `claude/message-templates`, so `{{property_link}}` fills from the share link.
+
+- **Data.** Migration `0012` adds `property_shares` and `property_share_views`. A share stores the token's SHA-256 for lookup plus a Fernet-encrypted copy for re-copying; one active share per property. Views are counted once per visitor per day using a hashed IP, and no raw IP is stored. up/down/up and `alembic check` pass.
+- **Authenticated API.**
+  - `GET/PUT/DELETE /api/properties/{id}/share` and `POST …/share/replace`.
+  - `PUT /api/property-share-settings` (admin) lets telecallers make properties public.
+  - `POST /api/leads/{id}/property-share-log` records "Shared property ‹title› link on WhatsApp (opened)" and returns 409 for DND.
+  - Forward property matches return `share_url`.
+- **Public routes.**
+  - `GET /p/{token}` is a server-rendered, script-free page. It carries og tags, `noindex`, `Referrer-Policy: no-referrer` and a strict CSP. It deviates from the spec's SPA route because WhatsApp previews need server HTML.
+  - `GET /api/public/p/{token}` returns allow-listed JSON.
+  - `…/photo/{n}` serves JPEGs resized to at most 1,600 px, by position among the ticked photos. `…/doc/{n}` serves ticked PDFs only.
+  - Each route is limited to 60 requests per minute per visitor IP, taken from the X-Forwarded-For header set by Caddy.
+- **Middleware.** It keeps a route's own `Referrer-Policy`. Public share files keep their short cache header; all other `/api` responses stay `no-store`.
+- **nginx.** `/p/` is proxied to the API with the strict header set; the upstream copies are hidden to avoid duplicates. Vite proxies `/p/` for local and browser tests. It was not validated with local Docker, because the Docker daemon was off; branch CI builds the real nginx image.
+- **Web.**
+  - A Share card on the property page: copy, WhatsApp (`wa.me/?text=`), replace, turn off, photo and PDF choices, show RERA, contact mode, and the admin's telecaller toggle.
+  - A **Share** button on lead-brief matches with a public link; it is disabled for DND.
+- **Tests.**
+  - `test_property_share.py` (3 tests) covers acceptance items 1–9 and 11. That includes the JSON allow-list with no id, reference, address, owner or file ids; a 2-of-5 photo subset where index 3 returns 404; an unticked PDF returning 404; and replace/off giving the same 404 as a random token.
+  - It also covers sold → contact only; suspended company → 404; the caller 403 until allowed; cross-company 404; DND 409; and 100 requests from one IP → 60 OK then 429.
+  - `property-share.spec.ts` covers turn on → public page in a no-login 360 px context → heading, price, no address or reference, og:image, noindex, tel/wa.me buttons, no horizontal scroll, resized photo → turn off gives 404.
+- **Checks.** ruff passes; pytest **314 passed**; lint and build pass; browser **93 passed**.
+- **Not deployed.**

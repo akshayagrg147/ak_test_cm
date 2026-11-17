@@ -157,6 +157,38 @@ class Task(Scoped, Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class PropertyShare(Scoped, Base):
+    """Public, unauthenticated link to one property. Only the token's hash is used for lookup."""
+
+    __tablename__ = "property_shares"
+    property_id: Mapped[str] = mapped_column(ForeignKey("properties.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    # Encrypted so the broker can copy the same link again; never serialized.
+    token_enc: Mapped[str] = mapped_column(Text)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    photo_file_ids: Mapped[list | None] = mapped_column(JSON, default=None)  # None = all property photos
+    doc_file_ids: Mapped[list] = mapped_column(JSON, default=list)  # PDFs are public only when ticked
+    show_rera: Mapped[bool] = mapped_column(default=True)
+    contact_mode: Mapped[str] = mapped_column(String(20), default="sharer")
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    views: Mapped[int] = mapped_column(default=0)
+    last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    __table_args__ = (
+        Index("uq_active_property_share", "property_id", unique=True, postgresql_where=enabled.is_(True)),
+        CheckConstraint("contact_mode IN ('sharer', 'company')", name="ck_property_share_contact"),
+    )
+
+
+class PropertyShareView(Base):
+    """One counted view per link, day and hashed visitor; raw IP addresses are never stored."""
+
+    __tablename__ = "property_share_views"
+    share_id: Mapped[str] = mapped_column(ForeignKey("property_shares.id", ondelete="CASCADE"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    visitor: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+
 class MessageTemplate(Scoped, Base):
     """Company message for WhatsApp click-to-chat or SMS links. ViaCRM never sends it."""
 

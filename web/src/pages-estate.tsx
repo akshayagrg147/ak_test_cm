@@ -16,6 +16,8 @@ import {
 import { api, download, params, send } from "./api";
 import { PrivateLogo, useAction, useAuth, useData, useDirectory } from "./main";
 import { LeadPicker } from "./pages-leads";
+import { PropertyShareCard, shareMessage } from "./property-share";
+import { whatsappLink } from "./whatsapp";
 import type { Property, Requirement, Visit, Booking } from "./estate-types";
 import {
   Badge,
@@ -722,6 +724,7 @@ export function PropertyDetailPage() {
                 )}
               </Panel>
             </div>
+            <PropertyShareCard property={p} />
             {edit && <PropertyForm item={p} close={() => setEdit(false)} />}
             {archive && (
               <FormDialog
@@ -746,7 +749,13 @@ export function PropertyDetailPage() {
   );
 }
 
-export function BuyerBrief({ leadId }: { leadId: string }) {
+export function BuyerBrief({
+  leadId,
+  lead,
+}: {
+  leadId: string;
+  lead?: { name: string; phone: string; dnd: boolean };
+}) {
   const q = useData<Requirement | null>(`/leads/${leadId}/requirements`),
     matches = useData<{ items: Property[]; criteria_saved: boolean }>(
       `/leads/${leadId}/property-matches`,
@@ -922,9 +931,51 @@ export function BuyerBrief({ leadId }: { leadId: string }) {
                       {p.reference} · {p.locality}, {p.city} · {money(p.price)}
                     </small>
                   </div>
-                  <Button variant="secondary" onClick={() => setVisit(p.id)}>
-                    Schedule visit
-                  </Button>
+                  <div className="inline-actions">
+                    {p.share_url &&
+                      lead &&
+                      (() => {
+                        const href = lead.dnd
+                          ? null
+                          : whatsappLink(
+                              lead.phone,
+                              shareMessage(p, p.share_url),
+                            );
+                        return href ? (
+                          <a
+                            className="button whatsapp-button"
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Share ${p.title} with ${lead.name} on WhatsApp`}
+                            onClick={() =>
+                              void action(() =>
+                                send(`/leads/${leadId}/property-share-log`, {
+                                  property_id: p.id,
+                                }),
+                              ).catch(() => undefined)
+                            }
+                          >
+                            Share
+                          </a>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            disabled
+                            title={
+                              lead.dnd
+                                ? "Client is marked do-not-contact"
+                                : "This phone number can't open WhatsApp"
+                            }
+                          >
+                            Share
+                          </Button>
+                        );
+                      })()}
+                    <Button variant="secondary" onClick={() => setVisit(p.id)}>
+                      Schedule visit
+                    </Button>
+                  </div>
                 </article>
               ))}
             </div>

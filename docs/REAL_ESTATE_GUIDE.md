@@ -288,6 +288,42 @@ has no WhatsApp account integration or bulk messaging. The lead's activity recor
 message was sent. The button is hidden for do-not-contact clients, and the server
 refuses the log for them. Anyone who can open the lead can use it.
 
+### Sharing a property as a public link
+
+On an available property's page, the **Share** card turns on a public page that
+buyers open without logging in:
+- The link looks like `https://viacrm.in/p/<random code>`. The code is 128 random
+  bits, never the property id. Only a hash of it is used to find the property, and an
+  encrypted copy lets you copy the same link again.
+- Buyers see the photos (all, or the ones you tick), price in Indian format, type,
+  BHK, baths, area, locality and city, possession, amenities, description and,
+  optionally, the RERA number. They also get **Call** and **WhatsApp** buttons for
+  the person who shared it, or the company contact if you choose that or that person
+  is deactivated.
+- **Never shown:** full address, owner/developer, internal reference, notes, file
+  names or ids, other properties and lead data. PDFs stay private unless ticked.
+- Photos are resized to at most 1,600 px; the original upload is never sent.
+- The page has preview tags, so WhatsApp shows a card with the first photo. It is
+  marked `noindex`, sends no referrer, and has no scripts.
+- **Replace link** stops the old link at once. **Turn off** makes it a plain "not
+  available" 404, identical to a link that never existed.
+- If the property becomes reserved, sold, leased, off-market or archived, the page
+  only says it is no longer available and shows the contact buttons; photos stop
+  loading.
+- A suspended company's links return 404.
+- The card shows how many times the link was opened, counted once per visitor per
+  day using a hashed address; raw IPs are never stored.
+- Public routes are limited to 60 requests per minute per visitor.
+
+Admins and managers turn sharing on. Telecallers can copy and send existing links
+and can turn sharing on only if an admin ticks **Let telecallers make properties
+public** on the card. Every turn-on, change, replace and turn-off is audited.
+
+On a lead's **Property brief**, matching properties that have a public link show
+**Share**. It opens WhatsApp to the client with the link and notes "Shared property ‹title›
+link on WhatsApp (opened)". It is disabled for do-not-contact clients. Message
+templates fill `{{property_link}}` from the property's public link.
+
 ### Message templates
 
 **Studio → Message templates** (admins and managers) holds the company's ready

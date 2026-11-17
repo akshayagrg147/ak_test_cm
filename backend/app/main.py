@@ -22,6 +22,7 @@ from . import (
     integrations,
     lead_capture,
     message_templates,
+    property_share,
     leads,
     member_login,
     notification_inbox,
@@ -115,8 +116,11 @@ async def request_metadata(request: Request, call_next):
         )
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "same-origin"
-    if request.url.path.startswith("/api"):
+    # Public share pages set the stricter no-referrer themselves; keep it.
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    if request.url.path.startswith("/api/public/p/") and "Cache-Control" in response.headers:
+        pass  # public share photos/PDFs set a short cache themselves
+    elif request.url.path.startswith("/api"):
         response.headers["Cache-Control"] = "no-store"
     log.info(
         json.dumps(
@@ -197,6 +201,7 @@ for router in [
     integrations.router,
     lead_capture.router,
     message_templates.router,
+    property_share.router,
     phone_calls.router,
     reports.router,
     notification_inbox.router,

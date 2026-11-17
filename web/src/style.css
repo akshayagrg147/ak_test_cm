@@ -6125,3 +6125,33 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* Property share card */
+.share-card {
+  margin-top: 22px;
+  scroll-margin-top: 90px;
+}
+.share-card input[readonly] {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+}
+.share-actions {
+  flex-wrap: wrap;
+  margin: 10px 0 4px;
+}
+.share-options {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.share-options legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+.share-callers {
+  margin-top: 14px;
+}

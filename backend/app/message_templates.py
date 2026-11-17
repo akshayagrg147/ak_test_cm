@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from .common import audit, dump, get_scoped, lead_access, mutate, rows
 from .db import get_db, now
 from .models import Audit, MessageTemplate, Organization, Note, Property, SiteVisit, User
+from .property_share import share_link_for
 from .schemas import Payload
 from .security import current, fail, roles, workspace
 
@@ -288,7 +289,7 @@ def render_template(lead_id: str, data: RenderIn, ctx=Depends(current), db: Sess
         "property_price": indian_price(prop.price) if prop else "",
         "property_locality": prop.locality if prop else "",
         "visit_time": visit_label(visit.starts_at, zone) if visit else "",
-        "property_link": "",
+        "property_link": share_link_for(db, ctx.org_id, prop.id) if prop else "",
     }
     used = [name for name in TOKEN.findall(template.body) if name in PLACEHOLDERS]
     missing = sorted({name for name in used if not values[name]})

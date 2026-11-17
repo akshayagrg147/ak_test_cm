@@ -85,7 +85,7 @@ test("template → editable preview → open WhatsApp link logs an 'opened' note
   await link.click();
   await (await popup).close();
   expect(opened[0]).toContain("wa.me/919876541401");
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Notes", exact: true }).click();
   await expect(
     page.getByText(/WhatsApp message opened using template Introduction/),

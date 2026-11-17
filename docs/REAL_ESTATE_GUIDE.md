@@ -288,6 +288,32 @@ has no WhatsApp account integration or bulk messaging. The lead's activity recor
 message was sent. The button is hidden for do-not-contact clients, and the server
 refuses the log for them. Anyone who can open the lead can use it.
 
+### Message templates
+
+**Studio → Message templates** (admins and managers) holds the company's ready
+messages: name (unique, any letter case), text up to 1,000 characters, a "use for"
+label and active/inactive. Placeholders in double curly brackets are filled from the
+lead and your workspace: `{{client_name}}`, `{{first_name}}`, `{{my_name}}`,
+`{{company}}`, `{{property_title}}`, `{{property_price}}` (₹1.25 Cr / ₹85 L /
+₹25,000), `{{property_locality}}`, `{{visit_time}}` (next scheduled visit, e.g. "Sat
+21 Nov, 11:30 am") and `{{property_link}}` (blank for now). Unknown placeholders
+are rejected when saving. New real-estate companies start with four editable
+templates; running real-estate setup again never duplicates or overwrites them.
+Deleting a template that lead notes already used hides it instead.
+
+On a lead, **Templates** opens a dialog:
+1. Pick a template.
+2. Optionally pick a property; ★ marks matches for the client's brief, and you can search for others.
+3. Edit the server-filled preview. Empty details are tidied away and listed under "Some details were empty".
+4. Choose **Open WhatsApp**, **Open SMS** or **Copy text**.
+
+Opening adds a lead note such as "WhatsApp message opened using template Visit
+confirm" with the final text. It records that the chat was opened; ViaCRM cannot
+know whether you sent it and never sends anything itself. Do-not-contact and
+archived clients cannot be messaged, and the server refuses both rendering and
+logging for them. Won and lost clients can still be messaged, as with the WhatsApp
+button. There is no bulk or scheduled sending.
+
 ### Automatic callback alerts
 
 The **bell in the top bar** shows a red count when a callback is overdue. Click

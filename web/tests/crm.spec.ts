@@ -679,6 +679,7 @@ test("work areas expose every permitted destination and select context for deep 
       studio: [
         "Workflows",
         "Connections",
+        "Message templates",
         "Audit log",
         "Data snapshots",
         "Workspace profile",
@@ -695,7 +696,13 @@ test("work areas expose every permitted destination and select context for deep 
     },
     {
       phone: "+919900000003",
-      studio: ["Workflows", "Connections", "Audit log", "Account & security"],
+      studio: [
+        "Workflows",
+        "Connections",
+        "Message templates",
+        "Audit log",
+        "Account & security",
+      ],
       people: ["Attendance", "Requests & approvals", "Team directory"],
       sales: ["Leads", "Closed opportunities"],
     },

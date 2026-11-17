@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from .common import audit, dump, get_scoped, lead_access, mutate, rows
 from .db import get_db, now
-from .models import Audit, Definition, MessageTemplate, Note, Property, SiteVisit, User
+from .models import Audit, MessageTemplate, Note, Property, SiteVisit, User
 from .schemas import Payload
 from .security import current, fail, roles, workspace
 
@@ -183,16 +183,14 @@ def delete_template(template_id: str, ctx=Depends(current), db: Session = Depend
 
 
 def contactable_lead(db, ctx, lead_id):
-    """The lead must be visible to the user, not do-not-contact and not closed."""
+    """The lead must be visible to the user and not do-not-contact.
+
+    Archived (deleted) leads are already 404 through lead_access. Won and lost clients stay messageable:
+    the owner chose on 17 Nov 2026 to keep WhatsApp available for them.
+    """
     lead = lead_access(db, ctx, lead_id)
     if lead.dnd:
         fail("do_not_contact", "Client is marked do-not-contact", 409)
-    closed = {"won", "lost"} | {
-        d.key for d in db.scalars(rows(db, Definition, ctx.org_id).where(Definition.kind == "stage"))
-        if d.config.get("closed", False)
-    }
-    if lead.stage in closed or lead.status in {"lost", "converted"}:
-        fail("lead_closed", "This client is closed; reopen the lead before messaging", 409)
     return lead
 
 

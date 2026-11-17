@@ -6,11 +6,11 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.db import SessionLocal, now
 from app.main import app
-from app.models import FieldHandoff, Lead, Note, SiteVisit, Task, User
+from app.models import FieldHandoff, Lead, MessageTemplate, Note, SiteVisit, Task, User
 from conftest import PASSWORD, make_lead
 from test_real_estate import booking_payload, inventory
 from test_recording_formats import native_recording, recording_call
@@ -41,6 +41,12 @@ def field_env(env):
     yield clients, ids, prop
     for client in created:
         client.close()
+
+
+def clear_message_templates():
+    """Starter templates (migration 0011) would trip their own downgrade guard before the one under test."""
+    with SessionLocal.begin() as db:
+        db.execute(delete(MessageTemplate))
 
 
 def payload(lead, prop, executive, **extra):
@@ -279,6 +285,7 @@ def test_early_attendance_retains_schedule_and_actual_time_with_atomic_followup(
     event = next(a for a in history["activity"] if a["action"] == "field_handoff_visit_outcome")
     assert datetime.fromisoformat(event["details"]["actual_started_at"]) == actual
     assert datetime.fromisoformat(event["details"]["scheduled_starts_at"]) == datetime.fromisoformat(scheduled)
+    clear_message_templates()
     with pytest.raises(RuntimeError, match="actual visit times"):
         command.downgrade(Config("alembic.ini"), "0008")
     command.check(Config("alembic.ini"))
@@ -475,6 +482,7 @@ def test_field_role_cannot_read_other_team_records_or_admin_areas(field_env):
 def test_field_handoff_migration_guard_retains_history(field_env):
     c, ids, prop = field_env
     create(c, ids, prop)
+    clear_message_templates()
     with pytest.raises(RuntimeError, match="field work or field-executive"):
         command.downgrade(Config("alembic.ini"), "0007")
     command.check(Config("alembic.ini"))

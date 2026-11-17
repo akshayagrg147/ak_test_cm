@@ -1253,16 +1253,9 @@ export function LeadDetail() {
                         );
                       })()}
                     {(() => {
-                      const closed =
-                        ["lost", "converted"].includes(lead.status) ||
-                        !!defs.data?.find(
-                          (d) => d.kind === "stage" && d.key === lead.stage,
-                        )?.config?.closed;
                       const blocked = lead.dnd
                         ? "Client is marked do-not-contact"
-                        : closed
-                          ? "This client is closed; reopen the lead before messaging"
-                          : "";
+                        : "";
                       return (
                         <>
                           <Button
@@ -1277,9 +1270,6 @@ export function LeadDetail() {
                             <MessageSquareText size={16} />
                             Templates
                           </Button>
-                          {blocked && lead.dnd === false && (
-                            <small className="muted-note">{blocked}</small>
-                          )}
                         </>
                       );
                     })()}

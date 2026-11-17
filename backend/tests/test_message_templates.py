@@ -95,10 +95,14 @@ def test_log_says_opened_and_dnd_closed_scope_are_refused(env):
     assert c["admin"].delete(f"/api/message-templates/{fresh['id']}").json()["kept_for_history"] is False
 
     quiet = own_lead(c, ids, name="Quiet One", phone="+919811166602", dnd=True)
+    assert c["caller"].post(f"/api/leads/{quiet['id']}/message-log", json={"channel": "sms", "text": "Hi"}).status_code == 409
+    usable = template(c, name="Usable", body="Hi {{first_name}}")
+    assert c["caller"].post(f"/api/leads/{quiet['id']}/template-render", json={"template_id": usable["id"]}).status_code == 409
+    # Won/lost clients stay messageable (owner's decision); archived ones are not found.
     closed = own_lead(c, ids, name="Closed One", phone="+919811166603", stage="lost", status="lost")
-    for blocked in (quiet, closed):
-        assert c["caller"].post(f"/api/leads/{blocked['id']}/message-log", json={"channel": "sms", "text": "Hi"}).status_code == 409
-        assert c["caller"].post(f"/api/leads/{blocked['id']}/template-render", json={"template_id": fresh["id"]}).status_code in (404, 409)
+    assert c["caller"].post(f"/api/leads/{closed['id']}/template-render", json={"template_id": usable["id"]}).status_code == 200
+    archived = own_lead(c, ids, name="Archived One", phone="+919811166605", deleted=True)
+    assert c["caller"].post(f"/api/leads/{archived['id']}/message-log", json={"channel": "sms", "text": "Hi"}).status_code == 404
     others = own_lead(c, ids, name="Not Mine", phone="+919811166604", owner="caller2")
     assert c["caller"].post(f"/api/leads/{others['id']}/template-render", json={"template_id": item["id"]}).status_code == 404
     assert c["other"].post(f"/api/leads/{lead['id']}/message-log", json={"channel": "sms", "text": "Hi"}).status_code == 404

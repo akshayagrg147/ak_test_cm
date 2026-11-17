@@ -246,7 +246,7 @@ export function TemplateMessageDialog({
       send(`/leads/${lead.id}/message-log`, {
         channel,
         template_id: templateId || null,
-        text: text.slice(0, 1000),
+        text: Array.from(text).slice(0, 1000).join(""),
       }),
     ).catch(setError);
   const options = [

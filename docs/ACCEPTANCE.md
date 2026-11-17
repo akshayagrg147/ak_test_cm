@@ -1439,3 +1439,10 @@ Built on `claude/whatsapp-click-to-chat`, including its follow-up fix: a 0 after
   - Full browser suite **92 passed**, including `message-templates.spec.ts`: template → editable preview with Hindi and emoji → wa.me (intercepted) and an sms: link → note says "opened" → do-not-contact disables Templates.
 - **Environment note.** During this work, something on the Mac (disk at 96%) repeatedly deleted `web/node_modules` and the Playwright browser cache, and stopped the local PostgreSQL. Each was reinstalled or restarted before the final runs above.
 - **Not deployed.**
+- **QA follow-ups, 17 Nov.**
+  - Rendered text is capped at 1,000 characters with a `truncated` flag and a UI warning, so the log never rejects it.
+  - The message log returns 404 for a deleted or inactive template.
+  - Starter templates are seeded once per company (`starter_templates_seeded` setting); the Demo Realty reset still re-seeds.
+  - Placeholder errors are plain messages, without the "body.body" prefix.
+  - Template edits are partial, so an omitted `purpose` keeps its value.
+  - A new test covers all five. ruff passes; pytest **311 passed**; lint and build pass; browser **92 passed**.

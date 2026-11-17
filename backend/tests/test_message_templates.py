@@ -142,3 +142,35 @@ def test_price_and_tidy_helpers():
     assert tidy("Rohit ji, site visit confirm: , . Location") == "Rohit ji, site visit confirm. Location"
     assert address_name("Mr. Rohit Sharma") == "Rohit" and address_name("Smt Kavita") == "Kavita"
     assert address_name("Dr.") == "Dr." and address_name("") == ""
+
+
+def test_qa_fixes_clamp_removed_templates_seed_once_errors_and_partial_edit(env):
+    c, ids = env
+    lead = own_lead(c, ids, name="R" + "a" * 150)
+    long = template(c, name="Long", body="{{client_name}} " * 60)
+    rendered = c["caller"].post(f"/api/leads/{lead['id']}/template-render", json={"template_id": long["id"]}).json()
+    assert rendered["truncated"] is True and len(rendered["text"]) <= 1000
+    logged = c["caller"].post(f"/api/leads/{lead['id']}/message-log",
+                              json={"channel": "whatsapp", "template_id": long["id"], "text": rendered["text"]})
+    assert logged.status_code == 201, logged.text
+    # Inactive or deleted templates cannot be named in a log.
+    paused = template(c, name="Paused", body="Hi {{first_name}}", active=False)
+    assert c["caller"].post(f"/api/leads/{lead['id']}/message-log",
+                            json={"channel": "sms", "template_id": paused["id"], "text": "Hi"}).status_code == 404
+    gone = template(c, name="Gone", body="Hi")
+    assert c["admin"].delete(f"/api/message-templates/{gone['id']}").json()["kept_for_history"] is False
+    assert c["caller"].post(f"/api/leads/{lead['id']}/message-log",
+                            json={"channel": "sms", "template_id": gone["id"], "text": "Hi"}).status_code == 404
+    # A clean placeholder error, without the field path prefix.
+    bad = c["admin"].post("/api/message-templates", json={"name": "Budget", "body": "Budget {{budget}}"}).json()
+    assert bad["error"]["message"].startswith("Unknown placeholder {{budget}}")
+    # A partial edit keeps the saved purpose.
+    edited = c["admin"].put(f"/api/message-templates/{long['id']}", json={"name": "Long text"}).json()
+    assert edited["name"] == "Long text" and edited["purpose"] == "site_visit"
+    assert c["admin"].put(f"/api/message-templates/{long['id']}", json={"purpose": None}).status_code == 422
+    # Starter templates are added once: deleting them all and re-running setup keeps them gone.
+    c["admin"].post("/api/real-estate/setup")
+    for item in c["admin"].get("/api/message-templates").json()["items"]:
+        c["admin"].delete(f"/api/message-templates/{item['id']}")
+    assert c["admin"].post("/api/real-estate/setup").status_code == 200
+    assert c["admin"].get("/api/message-templates").json()["items"] == []

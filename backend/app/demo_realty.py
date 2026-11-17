@@ -124,7 +124,7 @@ def reset():
                 db.execute(delete(table).where(table.c.org_id == DEMO_ID))
         db.flush()
         _records(db, org)
-        ensure_starter_templates(db, org.id)
+        ensure_starter_templates(db, org.id, force=True)
     print(f"{DEMO_NAME} records were reset. Logins and passwords are unchanged.")
 
 

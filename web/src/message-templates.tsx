@@ -183,6 +183,7 @@ export function MessageTemplatesPage() {
 interface Rendered {
   text: string;
   missing: string[];
+  truncated: boolean;
   template_name: string;
 }
 
@@ -208,6 +209,7 @@ export function TemplateMessageDialog({
   const [propertyId, setPropertyId] = useState("");
   const [text, setText] = useState("");
   const [missing, setMissing] = useState<string[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [copied, setCopied] = useState(false);
@@ -223,6 +225,7 @@ export function TemplateMessageDialog({
         if (!live) return;
         setText(r.text);
         setMissing(r.missing);
+        setTruncated(r.truncated);
         setName(r.template_name);
       })
       .catch((e) => {
@@ -243,7 +246,7 @@ export function TemplateMessageDialog({
       send(`/leads/${lead.id}/message-log`, {
         channel,
         template_id: templateId || null,
-        text,
+        text: text.slice(0, 1000),
       }),
     ).catch(setError);
   const options = [
@@ -319,6 +322,11 @@ export function TemplateMessageDialog({
           {missing.length > 0 && (
             <small role="status">
               Some details were empty: {missing.join(", ").replace(/_/g, " ")}.
+            </small>
+          )}
+          {truncated && (
+            <small role="status">
+              The filled-in message was over 1,000 characters and was shortened.
             </small>
           )}
           {wa && wa.length > LONG_URL && (

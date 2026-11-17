@@ -10,13 +10,13 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
-from pydantic import Field, field_validator
+from pydantic import Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .common import audit, dump, get_scoped, lead_access, mutate, rows
 from .db import get_db, now
-from .models import Audit, MessageTemplate, Note, Property, SiteVisit, User
+from .models import Audit, MessageTemplate, Organization, Note, Property, SiteVisit, User
 from .schemas import Payload
 from .security import current, fail, roles, workspace
 
@@ -34,6 +34,7 @@ PLACEHOLDERS = {
 }
 PURPOSES = ("any", "new_lead", "follow_up", "site_visit", "property")
 MAX_ACTIVE = 30
+MAX_TEXT = 1000  # rendered and logged text limit; the preview is clamped so the log never rejects it
 TOKEN = re.compile(r"\{\{\s*([^{}]*?)\s*\}\}")
 STARTERS = [
     ("Introduction", "new_lead",
@@ -54,18 +55,25 @@ class TemplateIn(Payload):
     active: bool = True
     sort_order: int = Field(default=0, ge=0, le=1000)
 
-    @field_validator("body")
-    @classmethod
-    def known_placeholders(cls, value):
-        unknown = sorted({name for name in TOKEN.findall(value) if name not in PLACEHOLDERS})
-        if unknown:
-            raise ValueError(
-                "Unknown placeholder " + ", ".join("{{" + n + "}}" for n in unknown)
-                + ". Use: " + ", ".join("{{" + n + "}}" for n in sorted(PLACEHOLDERS))
-            )
-        if "{{" in TOKEN.sub("", value) or "}}" in TOKEN.sub("", value):
-            raise ValueError("Close every placeholder with double curly brackets, for example {{first_name}}")
-        return value
+
+class TemplateUpdate(Payload):
+    """Partial edit: fields left out keep their saved values."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=60)
+    body: str | None = Field(default=None, min_length=1, max_length=1000)
+    purpose: Literal["any", "new_lead", "follow_up", "site_visit", "property"] | None = None
+    active: bool | None = None
+    sort_order: int | None = Field(default=None, ge=0, le=1000)
+
+
+def check_placeholders(body):
+    unknown = sorted({name for name in TOKEN.findall(body) if name not in PLACEHOLDERS})
+    if unknown:
+        fail("unknown_placeholder",
+             "Unknown placeholder " + ", ".join("{{" + n + "}}" for n in unknown)
+             + ". Use: " + ", ".join("{{" + n + "}}" for n in sorted(PLACEHOLDERS)), 422)
+    if "{{" in TOKEN.sub("", body) or "}}" in TOKEN.sub("", body):
+        fail("unclosed_placeholder", "Close every placeholder with double curly brackets, for example {{first_name}}", 422)
 
 
 class RenderIn(Payload):
@@ -76,12 +84,20 @@ class RenderIn(Payload):
 class LogIn(Payload):
     channel: Literal["whatsapp", "sms"]
     template_id: str | None = Field(default=None, max_length=36)
-    text: str = Field(min_length=1, max_length=1000)
+    text: str = Field(min_length=1, max_length=MAX_TEXT)
 
 
-def ensure_starter_templates(db, org_id, creator_id=None):
-    """Give a company the starter templates once; never duplicates or overwrites existing ones."""
-    if db.scalar(select(func.count()).select_from(MessageTemplate).where(MessageTemplate.org_id == org_id)):
+def ensure_starter_templates(db, org_id, creator_id=None, force=False):
+    """Give a company the starter templates once, ever: later setup runs never re-add deleted ones.
+
+    `force` is only for the fictional Demo Realty reset, which rebuilds its own records.
+    """
+    org = db.get(Organization, org_id)
+    seeded = org.settings.get("starter_templates_seeded", False)
+    existing = db.scalar(select(func.count()).select_from(MessageTemplate).where(MessageTemplate.org_id == org_id))
+    if not seeded:
+        org.settings = {**org.settings, "starter_templates_seeded": True}
+    if (seeded and not force) or existing:
         return
     for position, (name, purpose, body) in enumerate(STARTERS):
         db.add(MessageTemplate(org_id=org_id, name=name, purpose=purpose, body=body, sort_order=position,
@@ -107,6 +123,7 @@ def list_templates(ctx=Depends(current), db: Session = Depends(get_db, scope="fu
 
 
 def _check(db, ctx, data, existing=None):
+    check_placeholders(data.body)
     duplicate = db.scalar(
         rows(db, MessageTemplate, ctx.org_id).where(
             MessageTemplate.deleted.is_(False),
@@ -149,13 +166,17 @@ def _template(db, ctx, template_id):
 
 @router.put("/message-templates/{template_id}")
 def edit_template(
-    template_id: str, data: TemplateIn, ctx=Depends(current), db: Session = Depends(get_db, scope="function")
+    template_id: str, data: TemplateUpdate, ctx=Depends(current), db: Session = Depends(get_db, scope="function")
 ):
     roles(ctx, "admin", "manager")
     mutate(db, ctx)
     item = _template(db, ctx, template_id)
-    _check(db, ctx, data, item)
-    for key, value in data.model_dump().items():
+    changes = data.model_dump(exclude_unset=True)
+    if any(value is None for value in changes.values()):
+        fail("invalid_value", "Fields cannot be null", 422)
+    merged = TemplateIn(**{**{k: getattr(item, k) for k in TemplateIn.model_fields}, **changes})
+    _check(db, ctx, merged, item)
+    for key, value in changes.items():
         setattr(item, key, value)
     item.updated_at = now()
     audit(db, ctx, "message_template", item.id, "updated", f"Updated message template {item.name}")
@@ -272,14 +293,18 @@ def render_template(lead_id: str, data: RenderIn, ctx=Depends(current), db: Sess
     used = [name for name in TOKEN.findall(template.body) if name in PLACEHOLDERS]
     missing = sorted({name for name in used if not values[name]})
     text = tidy(TOKEN.sub(lambda m: values.get(m.group(1), ""), template.body))
-    return {"text": text, "missing": missing, "template_id": template.id, "template_name": template.name}
+    truncated = len(text) > MAX_TEXT
+    return {"text": text[:MAX_TEXT].rstrip(), "missing": missing, "truncated": truncated,
+            "template_id": template.id, "template_name": template.name}
 
 
 @router.post("/leads/{lead_id}/message-log", status_code=201)
 def log_message(lead_id: str, data: LogIn, ctx=Depends(current), db: Session = Depends(get_db, scope="function")):
     mutate(db, ctx)
     lead = contactable_lead(db, ctx, lead_id)
-    template = get_scoped(db, MessageTemplate, data.template_id, ctx) if data.template_id else None
+    template = _template(db, ctx, data.template_id) if data.template_id else None
+    if template and not template.active:
+        fail("not_found", "This template is no longer available; pick another", 404)
     label = "WhatsApp" if data.channel == "whatsapp" else "SMS"
     heading = f"{label} message opened" + (f" using template {template.name}" if template else "")
     note = Note(org_id=ctx.org_id, lead_id=lead.id, author_id=ctx.id, text=heading + "\n\n" + data.text)

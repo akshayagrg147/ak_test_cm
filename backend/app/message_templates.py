@@ -194,6 +194,15 @@ def contactable_lead(db, ctx, lead_id):
     return lead
 
 
+TITLES = re.compile(r"^(mr|mrs|ms|miss|dr|shri|sri|smt|kumari)\.?$", re.IGNORECASE)
+
+
+def address_name(full_name):
+    """First word of the name that isn't a title such as "Mr." or "Smt." (same rule as the WhatsApp button)."""
+    words = full_name.split()
+    return next((w for w in words if not TITLES.match(w)), words[0] if words else "")
+
+
 def indian_price(value):
     amount = Decimal(value or 0)
     if amount >= 10_000_000:
@@ -251,7 +260,7 @@ def render_template(lead_id: str, data: RenderIn, ctx=Depends(current), db: Sess
     me = db.get(User, ctx.id)
     values = {
         "client_name": lead.name.strip(),
-        "first_name": (lead.name.strip().split() or [""])[0],
+        "first_name": address_name(lead.name),
         "my_name": me.name if me else "",
         "company": ctx.org.settings.get("brand_name") or ctx.org.name,
         "property_title": prop.title if prop else "",

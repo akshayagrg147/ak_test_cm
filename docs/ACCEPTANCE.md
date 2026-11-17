@@ -1412,3 +1412,30 @@ Akshay approved the texts in the bot session. The seven files from `~/insta-lead
   - The browser journey `whatsapp.spec.ts` passes: wa.me is intercepted, never contacted; it checks the link, number, greeting, new-tab attributes, the axe check, the "opened" activity with no "sent" wording, and that the button is hidden for DND.
   - Full browser suite: **90 passed, 1 failed**. The failure was `hourly-call-chart.spec.ts`, run at about 00:05 IST; it passed 3/3 when rerun alone. It is a pre-existing time-of-day edge at IST midnight, unrelated to this change.
 - **Not deployed.**
+
+### Message templates (spec 1, branch `claude/message-templates`) — 17 November 2026
+
+Built on `claude/whatsapp-click-to-chat`, including its follow-up fix: a 0 after +91 is dropped and greetings skip titles such as Mr./Smt.
+
+- **Data.** Migration `0011` adds `message_templates`. It has a unique company name (any letter case) among non-deleted templates. Its downgrade refuses while templates exist, and up/down/up was checked on the test database.
+- **API.**
+  - `/api/message-templates`: admin and manager write; callers and field executives see active templates only.
+  - Unknown placeholders are rejected with the names listed, and a company can have at most 30 active templates.
+  - Delete becomes a hide when the template was used in a logged message.
+  - `/leads/{id}/template-render` fills placeholders on the server within the user's access: ₹ Cr/L/Indian grouping, the next scheduled visit in the workplace timezone, and tidying of blanks.
+  - `/leads/{id}/message-log` writes the lead note "WhatsApp|SMS message opened using template …" plus an audit row; the text never says "sent".
+- **Owner decision, 17 Nov.** Won and lost clients keep messaging, matching the WhatsApp button. Only do-not-contact (409) and archived (404) leads are blocked, and the server enforces it in both render and log.
+- **Starter templates.** Four are added for new real-estate companies, on real-estate setup and for Demo Realty, once only; setup never duplicates or overwrites them.
+- **Web.**
+  - Studio → Message templates (admin and manager).
+  - A lead **Templates** dialog: pick a template; pick a property (★ brief matches, plus search); edit the preview; Open WhatsApp, Open SMS or Copy text.
+  - The dialog warns when details were empty or the message is long.
+- **Tests.**
+  - `test_message_templates.py` (5 tests) covers acceptance items 1–3 and 5–10, plus the price, tidy and title helpers.
+  - Two older migration-guard tests in `test_field_work.py` now clear starter templates first, so the 0011 guard doesn't pre-empt the guard under test.
+  - The navigation test lists the new Studio entry.
+- **Checks.**
+  - ruff passes; pytest **310 passed**; lint and build pass.
+  - Full browser suite **92 passed**, including `message-templates.spec.ts`: template → editable preview with Hindi and emoji → wa.me (intercepted) and an sms: link → note says "opened" → do-not-contact disables Templates.
+- **Environment note.** During this work, something on the Mac (disk at 96%) repeatedly deleted `web/node_modules` and the Playwright browser cache, and stopped the local PostgreSQL. Each was reinstalled or restarted before the final runs above.
+- **Not deployed.**

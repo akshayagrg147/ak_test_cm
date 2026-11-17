@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 
 from app.db import SessionLocal
 from app.main import app
-from app.message_templates import indian_price, tidy
+from app.message_templates import address_name, indian_price, tidy
 from app.models import Lead, MessageTemplate, Note, SiteVisit
 from conftest import PASSWORD, make_lead
 from test_real_estate import inventory
@@ -140,3 +140,5 @@ def test_price_and_tidy_helpers():
     assert indian_price(Decimal("25000")) == "₹25,000"
     assert indian_price(Decimal("850")) == "₹850"
     assert tidy("Rohit ji, site visit confirm: , . Location") == "Rohit ji, site visit confirm. Location"
+    assert address_name("Mr. Rohit Sharma") == "Rohit" and address_name("Smt Kavita") == "Kavita"
+    assert address_name("Dr.") == "Dr." and address_name("") == ""
